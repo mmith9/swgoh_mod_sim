@@ -39,10 +39,11 @@ class ModSimulation():
         self.testPrintLevel=0
         self.walkPips(levelProbability,newMod)
         
-        print()
-        print("total probability encountered", self.totalProbability)
-        print("total recursion branches", self.branchCount)
-        
+        if self.testlevel>0:
+            print()
+            print("total probability encountered", self.totalProbability)
+            print("total recursion branches", self.branchCount)
+            
         return self.analysis
     
     def walkBoughtMod(self, levelProbability, mod:Mod):

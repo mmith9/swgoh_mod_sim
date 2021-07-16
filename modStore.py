@@ -7,6 +7,8 @@ class ModStore:
     
     def __init__(self):
 
+        self.testlevel=0
+
         odsFileName="mod_store_inventory.ods"
         odsData=read_ods(odsFileName,1)
 
@@ -87,7 +89,8 @@ class ModStore:
     def modShopping(self, budget, wishList, currency="credits"):
         stuffBought=[]
         for item in wishList:
-            print(item)
+            if self.testlevel>1 :
+                print(item)
             itemExpanded=[]
             self.expandItemToItems(item, itemExpanded)
         
@@ -114,7 +117,8 @@ class ModStore:
     #TODO 
 
     def expandItemToItems(self, item, itemExpanded):
-        print("item",item)
+        if self.testlevel>1:
+            print("item",item)
         if item["shape"]=="any":
             for shape in Mod.shapes:
                 self.expandItemToItemsGrade(item, itemExpanded, shape)

@@ -1,6 +1,5 @@
 
 from mod import Mod
-import math
 
 class ModAnalysis:
         
@@ -43,7 +42,6 @@ class ModAnalysis:
     def analyzeModList(self, modList):
         for mod in modList:
             self.analyzeMod(1, mod)
-
     
     def analyzeMod(self, levelProbability, mod):
             primary=mod.getPrimary()
@@ -66,8 +64,7 @@ class ModAnalysis:
                 if shape=="triangle" and primary=="crit dmg":
                     self.cdTriangleSpeedDistribution[speed]+=levelProbability
                 self.speedPerSpeedUpDistribution[speedUps][speed]+=levelProbability
-    
-    
+       
     def calcScores(self, multiplier=1):
 
         self.speedValue=self.value(self.speedDistribution, multiplier)
@@ -100,8 +97,7 @@ class ModAnalysis:
         # print(self.rltilt)
         # print(self.targetability)
         # print()
-        
-
+ 
     def value(self,dist, multiplier=1):
         values={"high":0, "mid":0, "low":0, "Elisa":0, "ElisaM14":0}
         x=1
@@ -122,6 +118,7 @@ class ModAnalysis:
                     values["Elisa"]+=dist[x] * ((x-9)**3) * multiplier
                 if value == "ElisaM14" and x>14:
                     values["ElisaM14"]+=dist[x] * ((x-14)**3) * multiplier
+                
         return values
 
     def divideValues(self,value1,value2):
@@ -141,3 +138,18 @@ class ModAnalysis:
         for value in values:
             mlt[value]=values[value]*multiplier
         return mlt
+
+def returnValueHigh(analysis:ModAnalysis):
+    return analysis.speedValue["high"]
+
+def returnValueMid(analysis:ModAnalysis):
+    return analysis.speedValue["mid"]
+
+def returnValueLow(analysis:ModAnalysis):
+    return analysis.speedValue["low"]
+
+def returnValueElisa(analysis:ModAnalysis):
+    return analysis.speedValue["Elisa"]
+
+def returnValueElisaM14(analysis:ModAnalysis):
+    return analysis.speedValue["ElisaM14"]

@@ -1,6 +1,5 @@
 
 from modsimulation import ModSimulation
-import matplotlib.pyplot as plt
 from modAnalysis import *
 from copy import deepcopy
 from modStore import *
@@ -110,7 +109,7 @@ base.creditChange(1 / baseDailyFactor, -item["dailyCreditCost"])
 ########################
 compareSettings=deepcopy(settings)
 
-compareSettings["general"]["greyMaxInitialStats"]=1
+compareSettings["general"]["greyMaxInitialStats"]=2
 
 for shape in Mod.shapes:
     compareSettings["minInitialSpeed"]["e"][shape]=5
@@ -214,3 +213,4 @@ print("compare tga ", compareOutput.targetability)
 print("base speed arrows:", baseOutput.speedArrowProbability*baseDailyFactor)
 print("compare speed arrows:", compareOutput.speedArrowProbability*compareDailyFactor)
 
+print(returnValueHigh(baseOutput))
