@@ -2,17 +2,24 @@
 from modsimulation import ModSimulation
 from modAnalysis import *
 from copy import deepcopy
-from modStore import *
-
 
 resources={"dailyEnergy":645, "dailyCredits":900000}
 
+
 general={"sellAccuracyArrows":1, "keepSpeedArrows":1, "ignoreRestOfArrows":1,
-    "sellNoSpeedMods":1, "sellTooLowInitialSpeedMods":1, "modSet":"offense",
+    "sellNoSpeedMods":1, "sellTooLowInitialSpeedMods":1, "sellTooSlowFinalMods":1,
+    "modSet":"offense",
     "quickPrimaryForking":1, "quickSecondaryForking":1, "quickSpeedForking":1,
     "greyMaxInitialStats":4
     }
-    
+
+modStore={"enableShopping":True,
+    "wishList":[
+        {"pips":5, "shape":"not arrow", "grade":"a", "modSet":"any", "primary":"any", "speed":"5"}
+    ]
+}       
+          
+
 #initial speed = 3 4 5 | set 6 to sell given grade
 minInitialSpeed={
     "e":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
@@ -40,7 +47,7 @@ minSpeedIfBumpMissed={
     "a":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}   
 }
 
-settings={"resources" : resources, "general" : general, "minInitialSpeed": minInitialSpeed, "minLev12Speed":minLev12Speed, "minSpeedIfBumpMissed":minSpeedIfBumpMissed}
+settings={"resources" : resources, "general" : general, "minInitialSpeed": minInitialSpeed, "minLev12Speed":minLev12Speed, "minSpeedIfBumpMissed":minSpeedIfBumpMissed, "modStore":modStore}
 
 baseSettings=deepcopy(settings)
 
@@ -79,31 +86,9 @@ base=ModSimulation()
 baseOutput = base.walkIt(baseSettings)
 baseEnergyCost=-baseOutput.avgEnergyChange
 baseCreditCost=-baseOutput.avgCreditsChange
-print(baseEnergyCost)
-print(baseCreditCost)
 
-baseDailyFactor=resources["dailyEnergy"]/baseEnergyCost
-
-baseBudget=resources["dailyCredits"]-baseCreditCost*baseDailyFactor
-print("budget for mods",baseBudget)
-
-modStore=ModStore()
-wishlist=[
-        {"pips":5, "shape":"not arrow", "grade":"a", "modSet":"any", "primary":"any", "speed":"5"}
-    ]
-boughtItems=modStore.modShopping(baseBudget, wishlist)
-
-item=boughtItems[0]
-print(item)
-
-mod=item["mod"]
-prob=item["dailyProbability"]
-cost=item["dailyCreditCost"]
-
-base.walkBoughtMod(item["dailyProbability"]/baseDailyFactor, item["mod"])
-
-base.creditChange(1 / baseDailyFactor, -item["dailyCreditCost"])
-
+print("bs full costs", baseOutput.costs)
+baseDailyFactor=baseOutput.costs["dailyFactor"]
 
 
 ########################
@@ -142,32 +127,10 @@ compare=ModSimulation()
 compareOutput=compare.walkIt(compareSettings)
 compareEnergyCost=-compareOutput.avgEnergyChange
 compareCreditCost=-compareOutput.avgCreditsChange
+compareDailyFactor=compareOutput.costs["dailyFactor"]
 
-print(compareEnergyCost)
-print(compareCreditCost)
+print("bs full costs", compareOutput.costs)
 
-compareDailyFactor=resources["dailyEnergy"]/compareEnergyCost
-
-compareBudget=resources["dailyCredits"]-compareCreditCost*compareDailyFactor
-print("budget for mods",compareBudget)
-
-modStore=ModStore()
-wishlist=[
-        {"pips":5, "shape":"not arrow", "grade":"a", "modSet":"any", "primary":"any", "speed":"5"}
-    ]
-boughtItems=modStore.modShopping(compareBudget, wishlist)
-
-item=boughtItems[0]
-print(item)
-
-mod=item["mod"]
-prob=item["dailyProbability"]
-cost=item["dailyCreditCost"]
-
-compare.walkBoughtMod(item["dailyProbability"]/compareDailyFactor, item["mod"])
-
-print(compareOutput.avgCreditsChange)
-compare.creditChange(1 / compareDailyFactor, -item["dailyCreditCost"])
 
 print(compareEnergyCost)
 print(compareOutput.avgCreditsChange)

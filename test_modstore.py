@@ -37,5 +37,6 @@ if testlevel==2:
     budget=800000
     bought=modStore.modShopping(budget, wishlist)
     for item in bought:
+        print(item)
         mod=item["mod"]
-        print(mod.pips, mod.shape, mod.grade, mod.modSet, mod.primary, mod.secondary, item["dailyCost"], item["dailyProbability"])
+        print(mod.pips, mod.shape, mod.grade, mod.modSet, mod.primary, mod.secondary, item["dailyCreditCost"], item["dailyProbability"])

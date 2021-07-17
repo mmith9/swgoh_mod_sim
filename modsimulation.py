@@ -1,3 +1,4 @@
+from modStore import ModStore
 from modAnalysis import *
 from mod import Mod
 from copy import deepcopy
@@ -43,7 +44,39 @@ class ModSimulation():
             print()
             print("total probability encountered", self.totalProbability)
             print("total recursion branches", self.branchCount)
-            
+
+        if self.settings["modStore"]["enableShopping"]:
+
+            energyCost=-self.analysis.avgEnergyChange
+            creditCost=-self.analysis.avgCreditsChange
+
+
+            dailyFactor=self.settings["resources"]["dailyEnergy"]/energyCost
+
+
+
+            budget=self.settings["resources"]["dailyCredits"]-creditCost*dailyFactor
+
+            if self.testlevel>10:
+                
+                print("energy",energyCost, "credits", creditCost, "factor", dailyFactor)
+                print("budget for mods",budget)
+
+            wishList=self.settings["modStore"]["wishList"]
+            modStore=ModStore()
+            boughtItems=modStore.modShopping(budget, wishList)
+
+            item=boughtItems[0]
+            self.walkBoughtMod(item["dailyProbability"]/dailyFactor, item["mod"])
+            self.creditChange(1 / dailyFactor, -item["dailyCreditCost"])
+
+        costs={"avgEnergy":energyCost,
+            "credits":creditCost,
+            "dailyFactor":dailyFactor,
+            "modStoreCreditsSpent":item["dailyCreditCost"]
+            }
+        self.analysis.costs=costs
+
         return self.analysis
     
     def walkBoughtMod(self, levelProbability, mod:Mod):

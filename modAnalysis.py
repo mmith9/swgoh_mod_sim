@@ -5,6 +5,7 @@ class ModAnalysis:
         
     def __init__(self):
 
+        self.costs="undefined"
         self.fertility="udnefined"
         self.rltilt="undefined"
         self.targetability="undefined"
@@ -88,6 +89,24 @@ class ModAnalysis:
 
         self.rltilt=self.multiplyValueByX(self.rltilt,100)
         self.targetability=self.multiplyValueByX(self.targetability,100)
+
+    def getScores(self):
+        scores={
+        "speedValue":self.speedValue,
+        "fertility":self.fertility,
+        
+        "squaresValue":self.squaresValue,
+        "diamondsValue": self.diamondsValue,
+        "circlesValue": self.circlesValue,
+        "crossesValue": self.crossesValue,
+        "trianglesValue": self.trianglesValue,
+
+        "rltilt": self.rltilt,
+        "targetability": self.targetability
+        }
+        
+        return scores
+
 
         # print(self.squaresValue)
         # print(self.diamondsValue)
