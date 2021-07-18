@@ -1,7 +1,8 @@
 from datetime import datetime
 from modsimulation import ModSimulation
 from modAnalysis import *
-from copy import deepcopy
+
+from simSettings import *
 
 import psutil
 import math
@@ -17,51 +18,9 @@ class ModSimulationIteration():
 
         self.testlevel=10
 
-        resources={"dailyEnergy":645, "dailyCredits":900000}
-
-        general={"sellAccuracyArrows":1, "keepSpeedArrows":1, "ignoreRestOfArrows":1,
-            "sellNoSpeedMods":1, "sellTooLowInitialSpeedMods":1, "sellTooSlowFinalMods":1,
-            "modSet":"offense",
-            "quickPrimaryForking":1, "quickSecondaryForking":1, "quickSpeedForking":1,
-            "greyMaxInitialStats":4
-            }
-
-        modStore={"enableShopping":True,
-            "wishList":[
-                {"pips":5, "shape":"not arrow", "grade":"a", "modSet":"any", "primary":"any", "speed":"5"}
-            ]
-        }       
-            
-        #initial speed = 3 4 5 | set 6 to sell given grade
-
-
-        minInitialSpeed={
-            "e":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "d":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "c":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "b":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "a":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}
-        }
-
-        #lev12 speed = 3/4/5 + 3/4/5/6 per grade
-        minLev12Speed={
-            "e":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "d":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "c":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "b":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "a":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}   
-        }
-
-        # 0 - do not allow misses
-        minSpeedIfBumpMissed={
-            "e":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "d":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0},
-            "c":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "b":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}, 
-            "a":{"square":0, "arrow":0, "diamond":0, "triangle":0, "circle":0, "cross":0}   
-        }
-
-        self.settings={"resources" : resources, "general" : general, "minInitialSpeed": minInitialSpeed, "minLev12Speed":minLev12Speed, "minSpeedIfBumpMissed":minSpeedIfBumpMissed, "modStore":modStore}
+        self.simSettings=SimSettings()
+        self.simSettings.set("minSpeedToKeep", 10)
+        self.simSettings.set("minSpeedToSlice", 100)
 
     def runSimsV1(self,countBranchOnly=False, benchmark=0):
         
@@ -101,13 +60,12 @@ class ModSimulationIteration():
         if self.benchmark>0:
             print('Predicted full run: {}'.format((endTime - startTime)*100/benchmark))
 
-            
         return self.outputList
 
     def walkGreyMaxInitialStats(self, returnDict):
         #complexity *5
         for maxStats in [0,1,2,3,4]:
-            self.settings["general"]["greyMaxInitialStats"]=maxStats
+            self.simSettings.set("uncoverStatsLimit", maxStats, grade="e")
             self.walkMinInitialSpeed(returnDict)
     
     def walkMinInitialSpeed(self, returnDict):
@@ -115,18 +73,10 @@ class ModSimulationIteration():
         #too severe and probably not worth on green+
         #simplyfying to only grey min initial speed
         #complexity *4
-
-        if self.settings["general"]["greyMaxInitialStats"]==0:
-            #can't uncover stats, means sell right away
-            for shape in Mod.shapes:
-                self.settings["minInitialSpeed"]["e"][shape]=6
+        for minSpeed in [3,4,5]:
+            self.simSettings.set("minInitialSpeed", minSpeed, grade="e")
             self.walkMinSpeedToSlice(returnDict)
-        else:
-            for minSpeed in [3,4,5]:
-                for shape in Mod.shapes:
-                    self.settings["minInitialSpeed"]["e"][shape]=minSpeed
-                self.walkMinSpeedToSlice(returnDict)
-        
+    
     def walkMinSpeedToSlice(self, returnDict):
         #complexity 
         #
@@ -137,11 +87,8 @@ class ModSimulationIteration():
         #gold *1 no slicing necessary
         # plus grey<green<blue<purple constraint
 
-        if self.settings["minInitialSpeed"]["e"]["square"]==6:
-            greenLowLimit=3
-        else:
-            greenLowLimit=self.settings["minInitialSpeed"]["e"]["square"]
-        
+        greenLowLimit=self.simSettings.minInitialSpeed["e"]["square"]
+
         greenLowLimit=max(greenLowLimit, 3) #green possible speed 3 to 2*6-1
         greenHighLimit=2*6-1
         for green in range(greenLowLimit,greenHighLimit): #blue in 3 to 3*6-1
@@ -151,16 +98,11 @@ class ModSimulationIteration():
                 purpleLowLimit=max(blue, 3)
                 purpleHighLimit=4*6-3
                 for purple in range(purpleLowLimit,purpleHighLimit):
-                    for shape in Mod.shapes:
-                        self.settings["minLev12Speed"]["d"][shape]=green
-                        self.settings["minSpeedIfBumpMissed"]["d"][shape]=green
 
-                        self.settings["minLev12Speed"]["c"][shape]=blue
-                        self.settings["minSpeedIfBumpMissed"]["c"][shape]=blue
-                        
-                        self.settings["minLev12Speed"]["b"][shape]=purple
-                        self.settings["minSpeedIfBumpMissed"]["b"][shape]=purple
-                        
+                    self.simSettings.set("minSpeedToSlice", green,  grade="d" )
+                    self.simSettings.set("minSpeedToSlice", blue,   grade="c" )
+                    self.simSettings.set("minSpeedToSlice", purple, grade="b" )
+
                     self.walkRunSimWithSettingsStep1(returnDict)
 
     def walkRunSimWithSettingsStep1(self, returnDict):
@@ -178,11 +120,12 @@ class ModSimulationIteration():
     def walkRunSimWithSettingsStep2(self, returnDict):
 
         if not self.enableMultiprocessing:
-            currentSettings=deepcopy(self.settings)
+            currentSettings=self.simSettings.getAll()
+            
             outcome=self.walkRunSimWithSettings(currentSettings)
             self.outputList.append(outcome)
         else:
-            currentSettings=deepcopy(self.settings)
+            currentSettings=self.simSettings.getAll()
             #wait permission to spawn
             print("spawn")
 

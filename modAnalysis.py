@@ -83,11 +83,11 @@ class ModAnalysis:
         self.r=self.addValues(self.r, self.circlesValue)
         self.l=self.crossesValue
         self.l=self.addValues(self.l, self.trianglesValue)
-        self.rltilt=self.divideValues(self.r, self.l)
+        self.rltilt=self.divideValues(self.l, self.r)
 
         self.targetability=self.divideValues(self.value(self.cdTriangleSpeedDistribution, multiplier),self.speedValue)
 
-        self.rltilt=self.multiplyValueByX(self.rltilt,100)
+        self.rltilt=self.multiplyValueByX(self.rltilt,100*3/2)
         self.targetability=self.multiplyValueByX(self.targetability,100)
 
     def getScores(self):

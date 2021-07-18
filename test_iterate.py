@@ -8,9 +8,9 @@ if __name__ == "__main__":
     globalReturnDict=globalManager.dict()
     test=ModSimulationIteration()
 
-    #output=test.runSimsV1(countBranchOnly=True)
+    output=test.runSimsV1(countBranchOnly=True)
 
-    output = test.runSimsV1(benchmark=5)
+    #output = test.runSimsV1(benchmark=1)
 
     #output=test.runSimsV1()
 
