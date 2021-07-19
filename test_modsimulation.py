@@ -8,52 +8,68 @@ from simSettings import *
 baseSettings=SimSettings()
 base=ModSimulation()
 
-baseSettings.set("uncoverStatsLimit", 4, grade="e")
-baseSettings.set("minSpeedToKeep", 0)
-baseSettings.set("minSpeedToSlice", 100)
-baseSettings.set("minSpeedToSlice", 0 , grade="e", speedBumps=1)
-baseSettings.set("minSpeedToSlice", 0 , grade="d", speedBumps=2)
-baseSettings.set("minSpeedToSlice", 0 , grade="c", speedBumps=3)
-baseSettings.set("minSpeedToSlice", 0 , grade="b", speedBumps=4)
+# baseSettings.set("uncoverStatsLimit", 4, grade="e")
+# baseSettings.set("minSpeedToKeep", 0)
+# baseSettings.set("minSpeedToSlice", 100)
+# baseSettings.set("minSpeedToSlice", 0 , grade="e", speedBumps=1)
+# baseSettings.set("minSpeedToSlice", 0 , grade="d", speedBumps=2)
+# baseSettings.set("minSpeedToSlice", 0 , grade="c", speedBumps=3)
+# baseSettings.set("minSpeedToSlice", 0 , grade="b", speedBumps=4)
 
+baseSettings.set("uncoverStatsLimit", 1, grade="e")
+baseSettings.set("minInitialSpeed", 5, grade="e")
+baseSettings.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
+baseSettings.set("minSpeedToSlice", 8 , grade="d")
+baseSettings.set("minSpeedToSlice", 10 , grade="c") 
+baseSettings.set("minSpeedToSlice", 13 , grade="b") 
 
 #print(baseSettings.getAll()["minSpeedToSlice"])
 
 
 baseOutput = base.walkIt(baseSettings.getAll())
 
-baseEnergyCost=-baseOutput.avgEnergyChange
-baseCreditCost=-baseOutput.avgCreditsChange
+baseEnergyCost= -baseOutput.budget.getModEnergy()
+baseCreditCost= -baseOutput.budget.getCredits()
+baseEnergyFactor=baseOutput.energyFactor
 
-print("bs full costs", baseOutput.costs)
-baseDailyFactor=baseOutput.costs["dailyFactor"]
+print("base costs", baseOutput.budget.getAll())
+print("EF", baseEnergyFactor, "Final credits balance", baseOutput.finalCreditsBalance)
 
 
 ########################
 compareSettings=SimSettings()
 compare=ModSimulation()
 
-compareSettings.set("uncoverStatsLimit", 3, grade="e")
+compareSettings.set("uncoverStatsLimit", 1, grade="e")
 compareSettings.set("minInitialSpeed", 5, grade="e")
 compareSettings.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
-compareSettings.set("minSpeedToSlice", 5 , grade="e")
 compareSettings.set("minSpeedToSlice", 8 , grade="d")
-compareSettings.set("minSpeedToSlice", 10 , grade="c")
-compareSettings.set("minSpeedToSlice", 12 , grade="b")
+compareSettings.set("minSpeedToSlice", 10 , grade="c") 
+compareSettings.set("minSpeedToSlice", 13 , grade="b") 
+
+
+compareSettings.set("uncoverStatsLimit", 3, grade="e", shape="triangle")
+#compareSettings.set("minInitialSpeed", 5, grade="e")
+#compareSettings.set("minSpeedToKeep", 10 )
+
+#compareSettings.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
+#compareSettings.set("minSpeedToSlice", 5 , grade="e")
+compareSettings.set("minSpeedToSlice", 7 , grade="d", shape="triangle")
+compareSettings.set("minSpeedToSlice", 10 , grade="c", shape="triangle")
+compareSettings.set("minSpeedToSlice", 12 , grade="b", shape="triangle")
 
 
 
 compareOutput=compare.walkIt(compareSettings.getAll())
 
-compareEnergyCost=-compareOutput.avgEnergyChange
-compareCreditCost=-compareOutput.avgCreditsChange
-compareDailyFactor=compareOutput.costs["dailyFactor"]
+compareEnergyCost=-compareOutput.budget.getModEnergy()
+compareCreditCost=-compareOutput.budget.getCredits()
+compareEnergyFactor=compareOutput.energyFactor
 
-print("bs full costs", compareOutput.costs)
+print("base costs", compareOutput.budget.getAll())
+print("EF", compareEnergyFactor, "Final credits balance", compareOutput.finalCreditsBalance)
 
 
-print(compareEnergyCost)
-print(compareOutput.avgCreditsChange)
 ##################################################
 
 energyRatio=baseEnergyCost/compareEnergyCost
@@ -68,11 +84,11 @@ for x in range(0,32):
     else:
         print("div0")
 
-print("base daily credits",baseOutput.avgCreditsChange*baseDailyFactor)
-print("compare daily credits",compareOutput.avgCreditsChange*compareDailyFactor)
+print("base daily credits",baseOutput.budget.getCredits()*baseEnergyFactor)
+print("compare daily credits",compareOutput.budget.getCredits()*compareEnergyFactor)
 
-baseOutput.calcScores(baseDailyFactor)
-compareOutput.calcScores(compareDailyFactor)
+baseOutput.calcScores(baseEnergyFactor)
+compareOutput.calcScores(compareEnergyFactor)
 
 
 #baseSpeedValue=Distribution.value(baseOutput.speedDistribution)
@@ -93,8 +109,8 @@ print("base tilt   ",baseOutput.rltilt)
 print("compare tilt", compareOutput.rltilt)
 print("base tga    ", baseOutput.targetability)
 print("compare tga ", compareOutput.targetability)
-print("base speed arrows:", baseOutput.speedArrowProbability*baseDailyFactor)
-print("compare speed arrows:", compareOutput.speedArrowProbability*compareDailyFactor)
+print("base speed arrows:", baseOutput.speedArrowProbability*baseEnergyFactor)
+print("compare speed arrows:", compareOutput.speedArrowProbability*compareEnergyFactor)
 
-print(returnValueHigh(baseOutput))
+
 

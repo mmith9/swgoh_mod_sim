@@ -1,27 +1,26 @@
 from datetime import datetime
 from modsimulation import ModSimulation
 from modAnalysis import *
-
+from copy import deepcopy
 from simSettings import *
 
 import psutil
 import math
 import multiprocessing
 
-class ModSimulationIteration():
+class ModSimulationIteration:
 
     def __init__(self):
        
         ModSimulationIteration.manager=multiprocessing.Manager()
     
-        self.enableMultiprocessing=True
+        self.enableMultiprocessing=False
 
-        self.testlevel=10
+        self.testlevel=20
 
         self.simSettings=SimSettings()
         self.simSettings.set("minSpeedToKeep", 10)
-        self.simSettings.set("minSpeedToSlice", 100)
-
+        
     def runSimsV1(self,countBranchOnly=False, benchmark=0):
         
         self.outputList=[]
@@ -31,13 +30,14 @@ class ModSimulationIteration():
         self.benchmark=benchmark
 
         startTime = datetime.now()
+        self.startUsedMem=psutil.virtual_memory()[3]
 
         returnDict="undefined"
 
         if self.enableMultiprocessing:
               
             self.processList=[]
-            self.mpOutputList=[]
+     
             
             returnDict=ModSimulationIteration.manager.dict()
 
@@ -66,17 +66,29 @@ class ModSimulationIteration():
         #complexity *5
         for maxStats in [0,1,2,3,4]:
             self.simSettings.set("uncoverStatsLimit", maxStats, grade="e")
+            if self.testlevel>9:
+                print("e stats", maxStats, end="| ")
             self.walkMinInitialSpeed(returnDict)
-    
+
     def walkMinInitialSpeed(self, returnDict):
         #complexity 3^5
         #too severe and probably not worth on green+
         #simplyfying to only grey min initial speed
         #complexity *4
-        for minSpeed in [3,4,5]:
-            self.simSettings.set("minInitialSpeed", minSpeed, grade="e")
+
+        #uncover 0 on grey means sell instantly
+        if self.simSettings.uncoverStatsLimit["e"]["square"]==0:
+            if self.testlevel>10:
+                print("e min speed", 6, end="| ")       
+            self.simSettings.set("minInitialSpeed", 6, grade="e")
             self.walkMinSpeedToSlice(returnDict)
-    
+        else:
+            for minSpeed in [3,4,5]:
+                self.simSettings.set("minInitialSpeed", minSpeed, grade="e")
+                if self.testlevel>10:
+                    print("e min speed", minSpeed, end="| ")               
+                self.walkMinSpeedToSlice(returnDict)
+
     def walkMinSpeedToSlice(self, returnDict):
         #complexity 
         #
@@ -88,6 +100,8 @@ class ModSimulationIteration():
         # plus grey<green<blue<purple constraint
 
         greenLowLimit=self.simSettings.minInitialSpeed["e"]["square"]
+        if greenLowLimit==6:
+            greenLowLimit=0
 
         greenLowLimit=max(greenLowLimit, 3) #green possible speed 3 to 2*6-1
         greenHighLimit=2*6-1
@@ -99,6 +113,9 @@ class ModSimulationIteration():
                 purpleHighLimit=4*6-3
                 for purple in range(purpleLowLimit,purpleHighLimit):
 
+                    if self.testlevel>11:
+                        print("d c b", green, blue, purple, end="| ")
+
                     self.simSettings.set("minSpeedToSlice", green,  grade="d" )
                     self.simSettings.set("minSpeedToSlice", blue,   grade="c" )
                     self.simSettings.set("minSpeedToSlice", purple, grade="b" )
@@ -108,6 +125,12 @@ class ModSimulationIteration():
     def walkRunSimWithSettingsStep1(self, returnDict):
         
         self.branchCount+=1
+
+        if self.testlevel>7 :
+            endUsedMem=psutil.virtual_memory()[3]
+            memUsed=self.startUsedMem-endUsedMem
+            print("sim number", self.branchCount, "mem used",math.trunc(memUsed/1024),"Kb",memUsed % 1024)
+
         if self.countBranchOnly:
             pass
         else:
@@ -118,36 +141,24 @@ class ModSimulationIteration():
                 self.walkRunSimWithSettingsStep2(returnDict)
 
     def walkRunSimWithSettingsStep2(self, returnDict):
+        currentSettings=deepcopy(self.simSettings.getAll())
 
-        if not self.enableMultiprocessing:
-            currentSettings=self.simSettings.getAll()
-            
-            outcome=self.walkRunSimWithSettings(currentSettings)
+        if not self.enableMultiprocessing:            
+            outcome=ModSimulationIteration.walkRunSimWithSettings(currentSettings)
             self.outputList.append(outcome)
-        else:
-            currentSettings=self.simSettings.getAll()
-            #wait permission to spawn
-            print("spawn")
-
+        else:       
+            if self.testlevel>8:
+                print("ProcSpawn ",end="")
             branchCount=self.branchCount
 
             self.pool.apply_async(ModSimulationIteration.walkRunSimWithSettingsWrapper, (currentSettings, branchCount, returnDict))
-            # workerProcess=multiprocessing.Process(target=ModSimulationIteration.walkRunSimWithSettingsWrapper, args=(currentSettings, branchCount, returnDict))
-            # self.processList.append(workerProcess)
-            # workerProcess.start()
             
     def walkRunSimWithSettingsWrapper(currentSettings, currentBranch, returnDict):
         print(psutil.virtual_memory())
-        startUsedMem=psutil.virtual_memory()[3]
-
+        
         output=ModSimulationIteration.walkRunSimWithSettings(currentSettings)
         returnDict[currentBranch] = output
-        endUsedMem=psutil.virtual_memory()[3]
-        memUsed=startUsedMem-endUsedMem
-        print("sim number", currentBranch, "mem used",math.trunc(memUsed/1024),"Kb",memUsed % 1024)
-        
-        #ModSimulationIteration.processSemaphore.release()
-
+       
         print("process done")
 
     def walkRunSimWithSettings(currentSettings):
@@ -155,14 +166,12 @@ class ModSimulationIteration():
         modSim=ModSimulation()
         analysis = modSim.walkIt(currentSettings)
 
-        dailyFactor=analysis.costs["dailyFactor"]
-
-        analysis.calcScores(dailyFactor)
+        analysis.calcScores(analysis.energyFactor)
         scores=analysis.getScores()
-        costs=analysis.costs
-        #print(scores)#
+        costs=analysis.budget.getAll()
         
-        return {"scores":scores, "settings":currentSettings, "cost":costs}
+        
+        return {"scores":scores, "settings":currentSettings, "costs":costs}
 
 def rtValueHigh(x):
     return x["scores"]["speedValue"]["high"]

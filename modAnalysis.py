@@ -1,18 +1,24 @@
 
 from mod import Mod
+from budget import Budget
 
 class ModAnalysis:
         
     def __init__(self):
 
-        self.costs="undefined"
+        self.budget=Budget()
+        self.modStoreSpendings=0
+        self.finalCreditsBalance=0
+        self.energyFactor=0
+
+        #self.costs="undefined"
         self.fertility="udnefined"
         self.rltilt="undefined"
         self.targetability="undefined"
         self.speedValue="undefined"
 
-        self.avgEnergyChange=0
-        self.avgCreditsChange=0
+        # self.avgEnergyChange=0
+        # self.avgCreditsChange=0
         
         self.speedDistribution=[0 for x in range(0,32)]
 

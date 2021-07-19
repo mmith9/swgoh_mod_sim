@@ -8,63 +8,65 @@ class ModStore:
     def __init__(self):
 
         self.testlevel=0
-
-        odsFileName="mod_store_inventory.ods"
-        odsData=read_ods(odsFileName,1)
-
-        self.storeModCount=len(odsData["shop:shape"])
-        self.storeModList=[]
-        for x in range(0, self.storeModCount):
-            mod={"shape":odsData["shop:shape"][x], "grade":odsData["shop:grade"][x], "modSet":odsData["shop:modset"][x],
-                  "primary":odsData["shop:primary"][x], "secondarySpeed":odsData["shop:secondary_speed"][x], "currency":odsData["shop:currency"][x]}
-            self.storeModList.append(mod)
-
-        for x in range(0, self.storeModCount):
-            if self.storeModList[x]["modSet"]=="cc":
-                self.storeModList[x]["modSet"]="crit chance"
-            if self.storeModList[x]["modSet"]=="cd":
-                self.storeModList[x]["modSet"]="crit dmg"
-            if self.storeModList[x]["modSet"]=="hp":
-                self.storeModList[x]["modSet"]="health %"
-            if self.storeModList[x]["modSet"]=="def":
-                self.storeModList[x]["modSet"]="defense %"
-            if self.storeModList[x]["modSet"]=="off":
-                self.storeModList[x]["modSet"]="offense %"
-        
-        circleCount=0
-        for x in range(0, self.storeModCount):
-            if self.storeModList[x]["primary"]=="cc":
-                self.storeModList[x]["primary"]="crit chance"
-            if self.storeModList[x]["primary"]=="cd":
-                self.storeModList[x]["primary"]="crit dmg"
-            if self.storeModList[x]["primary"]=="hp":
-                self.storeModList[x]["primary"]="health %"
-            if self.storeModList[x]["primary"]=="prot":
-                self.storeModList[x]["primary"]="protection %"
-            if self.storeModList[x]["primary"]=="ca":
-                self.storeModList[x]["primary"]="crit avoidance"
-            if self.storeModList[x]["primary"]=="off":
-                self.storeModList[x]["primary"]="offense %"
-            if self.storeModList[x]["primary"]=="def":
-                self.storeModList[x]["primary"]="defense %"
-            if self.storeModList[x]["primary"]=="acc":
-                self.storeModList[x]["primary"]="accuracy"
-
-            if self.storeModList[x]["shape"]=="square":
-                self.storeModList[x]["primary"]="offense %"
-            if self.storeModList[x]["shape"]=="diamond":
-                self.storeModList[x]["primary"]="defense %"
+        if False:
             
-            if self.storeModList[x]["shape"]=="circle":
-                circleCount+=1
-                if (circleCount % 2):
+
+            odsFileName="mod_store_inventory.ods"
+            odsData=read_ods(odsFileName,1)
+
+            self.storeModCount=len(odsData["shop:shape"])
+            self.storeModList=[]
+            for x in range(0, self.storeModCount):
+                mod={"shape":odsData["shop:shape"][x], "grade":odsData["shop:grade"][x], "modSet":odsData["shop:modset"][x],
+                    "primary":odsData["shop:primary"][x], "secondarySpeed":odsData["shop:secondary_speed"][x], "currency":odsData["shop:currency"][x]}
+                self.storeModList.append(mod)
+
+            for x in range(0, self.storeModCount):
+                if self.storeModList[x]["modSet"]=="cc":
+                    self.storeModList[x]["modSet"]="crit chance"
+                if self.storeModList[x]["modSet"]=="cd":
+                    self.storeModList[x]["modSet"]="crit dmg"
+                if self.storeModList[x]["modSet"]=="hp":
+                    self.storeModList[x]["modSet"]="health %"
+                if self.storeModList[x]["modSet"]=="def":
+                    self.storeModList[x]["modSet"]="defense %"
+                if self.storeModList[x]["modSet"]=="off":
+                    self.storeModList[x]["modSet"]="offense %"
+            
+            circleCount=0
+            for x in range(0, self.storeModCount):
+                if self.storeModList[x]["primary"]=="cc":
+                    self.storeModList[x]["primary"]="crit chance"
+                if self.storeModList[x]["primary"]=="cd":
+                    self.storeModList[x]["primary"]="crit dmg"
+                if self.storeModList[x]["primary"]=="hp":
                     self.storeModList[x]["primary"]="health %"
-                else:
+                if self.storeModList[x]["primary"]=="prot":
                     self.storeModList[x]["primary"]="protection %"
+                if self.storeModList[x]["primary"]=="ca":
+                    self.storeModList[x]["primary"]="crit avoidance"
+                if self.storeModList[x]["primary"]=="off":
+                    self.storeModList[x]["primary"]="offense %"
+                if self.storeModList[x]["primary"]=="def":
+                    self.storeModList[x]["primary"]="defense %"
+                if self.storeModList[x]["primary"]=="acc":
+                    self.storeModList[x]["primary"]="accuracy"
 
-            if self.storeModList[x]["currency"]!="ship":
-                self.storeModList[x]["currency"]="credits"
-            
+                if self.storeModList[x]["shape"]=="square":
+                    self.storeModList[x]["primary"]="offense %"
+                if self.storeModList[x]["shape"]=="diamond":
+                    self.storeModList[x]["primary"]="defense %"
+                
+                if self.storeModList[x]["shape"]=="circle":
+                    circleCount+=1
+                    if (circleCount % 2):
+                        self.storeModList[x]["primary"]="health %"
+                    else:
+                        self.storeModList[x]["primary"]="protection %"
+
+                if self.storeModList[x]["currency"]!="ship":
+                    self.storeModList[x]["currency"]="credits"
+                
     def getModChance(self, mod:Mod, currency="credits"):
         assert(self.storeModCount>0)
 
@@ -104,7 +106,7 @@ class ModStore:
         mod.primary="crit dmg"
         mod.level=1
         mod.secondary["speed"]=[1,5]
-        probability=0.316464390792661
+        probability=0.316464390792661 * 7 *5 ## TESTING PURPOSES
         price=self.getModPrice()
         canAfford=1
         if price*probability>budget:

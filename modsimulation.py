@@ -2,17 +2,35 @@ from modStore import ModStore
 from modAnalysis import *
 from mod import Mod
 from copy import deepcopy
+from budget import Budget
 
 class ModSimulation():
     
+    def __init__(self):
+        self.budget=Budget()
+        self.budget.calculateWeeklyBudget()
+
+        pass
+
     def walkIt(self,settings):
-           
+
+        # recursion/iteration start level           
         self.totalProbability=0
         self.branchCount=0
-
-        self.modSet=settings["general"]["modSet"]
+        levelProbability=1
 
         self.analysis=ModAnalysis()
+        self.settings=settings
+        self.quickPrimaryForking=self.settings["general"]["quickPrimaryForking"]
+        self.quickSecondaryForking=self.settings["general"]["quickSecondaryForking"]
+        self.quickSpeedForking=self.settings["general"]["quickSpeedForking"]
+
+        #start with rolling a mod from challenges
+        #self.simCost.applyChange({"modEnergy": -16 * levelProbability})
+        #self.simCost.applyChange({"credits": 7500 * levelProbability})
+        self.energyChange(levelProbability, -16)
+        self.creditChange(levelProbability, 7500)
+
         newMod=Mod()
 
         newMod.pips="undefined"
@@ -21,23 +39,14 @@ class ModSimulation():
         newMod.shape="undefined"
         newMod.primary="undefined"
         newMod.secondary={}
-        
-        self.settings=settings
-        
-        levelProbability=1
-        self.energyChange(levelProbability, -16)
-        self.creditChange(levelProbability, 7500)
-        
-        self.quickPrimaryForking=1
-        self.quickSecondaryForking=1
-        self.quickSpeedForking=1
+        self.modSet=settings["general"]["modSet"]
 
-        self.quickPrimaryForking=self.settings["general"]["quickPrimaryForking"]
-        self.quickSecondaryForking=self.settings["general"]["quickSecondaryForking"]
-        self.quickSpeedForking=self.settings["general"]["quickSpeedForking"]
+        self.testlevel=15
+        self.testPrintLevel=15
+        # self.quickPrimaryForking=1
+        # self.quickSecondaryForking=1
+        # self.quickSpeedForking=1
 
-        self.testlevel=1
-        self.testPrintLevel=1
         self.walkPips(levelProbability,newMod)
         
         if self.testlevel>0:
@@ -47,32 +56,41 @@ class ModSimulation():
 
         if self.settings["modStore"]["enableShopping"]:
 
-            energyCost=-self.analysis.avgEnergyChange
-            creditCost=-self.analysis.avgCreditsChange
+            # energyCost=-self.analysis.avgEnergyChange
+            # creditCost=-self.analysis.avgCreditsChange
 
-            dailyFactor=self.settings["resources"]["dailyEnergy"]/energyCost
+           # simCosts=self.analysis.budget.getAll()
 
-            budget=self.settings["resources"]["dailyCredits"]-creditCost*dailyFactor
+            energyCost= - self.analysis.budget.getModEnergy()
+            creditCost= - self.analysis.budget.getCredits()
+
+            # energyFactor=self.settings["resources"]["dailyEnergy"]/energyCost
+            energyFactor=self.budget.getModEnergy() / energyCost
+            
+            # budget=self.settings["resources"]["dailyCredits"]-creditCost*energyFactor
+            modStoreBudget=self.budget.getCredits() - creditCost*energyFactor
 
             if self.testlevel>10:
                 
-                print("energy",energyCost, "credits", creditCost, "factor", dailyFactor)
-                print("budget for mods",budget)
+                print("energy",energyCost, "credits", creditCost, "factor", energyFactor)
+                print("budget for mods", modStoreBudget)
 
             wishList=self.settings["modStore"]["wishList"]
             modStore=ModStore()
-            boughtItems=modStore.modShopping(budget, wishList)
+            boughtItems=modStore.modShopping(modStoreBudget, wishList)
 
             item=boughtItems[0]
-            self.walkBoughtMod(item["dailyProbability"]/dailyFactor, item["mod"])
-            self.creditChange(1 / dailyFactor, -item["dailyCreditCost"])
+            self.walkBoughtMod(item["dailyProbability"]/energyFactor, item["mod"])
 
-        costs={"avgEnergy":energyCost,
-            "credits":creditCost,
-            "dailyFactor":dailyFactor,
-            "modStoreCreditsSpent":item["dailyCreditCost"]
-            }
-        self.analysis.costs=costs
+            if self.testlevel>10:
+                print("bought", item)
+
+            self.analysis.modStoreSpendings= item["dailyCreditCost"]
+
+#            self.creditChange(1 / energyFactor, -item["dailyCreditCost"])
+
+            self.analysis.finalCreditsBalance= self.budget.getCredits() + self.analysis.budget.getCredits() * energyFactor - self.analysis.modStoreSpendings
+            self.analysis.energyFactor=energyFactor
 
         return self.analysis
     
@@ -91,10 +109,12 @@ class ModSimulation():
         pass
 
     def energyChange(self, levelProbability, change):
-        self.analysis.avgEnergyChange+=levelProbability*change
+        #self.analysis.avgEnergyChange+=levelProbability*change
+        self.analysis.budget.applyChange({"modEnergy": levelProbability*change })
 
     def creditChange(self, levelProbability, change):
-        self.analysis.avgCreditsChange+=levelProbability*change
+        #self.analysis.avgCreditsChange+=levelProbability*change
+        self.analysis.budget.applyChange({"credits": levelProbability*change})
 
     def walkEND(self,probability):
         self.totalProbability+=probability
