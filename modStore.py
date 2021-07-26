@@ -88,7 +88,7 @@ class ModStore:
         level15modCost={"credits": 4158400, "ship":1910000}
         return level15modCost[currency]
 
-    def modShopping(self, budget, wishList, currency="credits"):
+    def modShopping(self, wishList, budget=0, currency="credits"):
         stuffBought=[]
         for item in wishList:
             if self.testlevel>1 :
@@ -106,14 +106,13 @@ class ModStore:
         mod.primary="crit dmg"
         mod.level=1
         mod.secondary["speed"]=[1,5]
-        probability=0.316464390792661 * 7 *5 ## TESTING PURPOSES
+        probability=1 ## TESTING PURPOSES
         price=self.getModPrice()
         canAfford=1
-        if price*probability>budget:
-            canAfford=budget/(price*probability)
-        
-        price=price-86200
-        item={"mod":mod, "dailyCreditCost":price*probability*canAfford, "dailyProbability":probability*canAfford}
+
+      
+        price=price
+        item={"mod":mod, "creditCost":price*probability*canAfford}
         stuffBought=[item]
         return stuffBought
     #TODO 

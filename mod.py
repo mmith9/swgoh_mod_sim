@@ -141,6 +141,9 @@ class Mod:
         return increases
 
     grades=["e","d","c","b","a"]
+    grades6Dot=["6e", "6d", "6c", "6b", "6a"]
+    allGrades=grades+grades6Dot
+
     gradeProbability={"a":2.3,"b":4.1,"c":10.3,"d":19.2,"e":64.1}
     
     shapes=["arrow","square","diamond","circle","cross","triangle"]
@@ -178,6 +181,9 @@ class Mod:
     initialSpeedProbability={1:0, 2:0, 3:30.4, 4:34.1, 5:35.5}
     increaseSpeedProbability={1:0, 2:0, 3:18.9, 4:35.1, 5:37.9, 6:8.1}
 
+    speedBumpsStr=["0", "1", "2", "3", "4", "5"]
+    speedBumpsInt=range(0,6)
+
     modLevelingCost={
         5:{
             1:3450, 2:3450, 3:3450, 4:3450, 5:4600, 6:5750, 7:5750, 8:8050, 9:10300, 10:10300, 11:27650, 12:35650, 13:35650, 14:90850
@@ -197,12 +203,21 @@ class Mod:
     }
 
     #material and credits
-    modSlicingCost={
-        "e":{"mats":10,"credits":18000},
-        "d":{"mats":20,"credits":36000},
-        "c":{"mats":35,"credits":63000},
-        "b":{"mats":50,"credits":90000}
+    modSlicingCost={    
+            "e":{"mats":10,"credits":18000},
+            "d":{"mats":20,"credits":36000},
+            "c":{"mats":35,"credits":63000},
+            "b":{"mats":50,"credits":90000},
+            "a":{"capacitor":50, "amplifier":50, "modulator":20, "credits":200000},
+
+            "6e":{"module":10, "credits":36000},
+            "6d":{"module":10, "amplifier":5, "capacitor":5, "unit":10, "credits":72000},
+            "6c":{"module":10, "amplifier":10, "capacitor":10, "unit":20, "resistor":10, "credits":126000 },
+            "6b":{"capacitor":30, "modulator":10, "unit":20, "resistor":20, "microprocessor":15, "credits":276000 },
+            "6a":{}
     }
+
+    
 
     def getRndFromDistribution(probabilities):
         probabilitySpace=0

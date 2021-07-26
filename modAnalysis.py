@@ -7,19 +7,12 @@ class ModAnalysis:
     def __init__(self):
 
         self.budget=Budget()
-        self.modStoreSpendings=0
-        self.finalCreditsBalance=0
-        self.energyFactor=0
 
-        #self.costs="undefined"
-        self.fertility="udnefined"
+        
         self.rltilt="undefined"
         self.targetability="undefined"
         self.speedValue="undefined"
 
-        # self.avgEnergyChange=0
-        # self.avgCreditsChange=0
-        
         self.speedDistribution=[0 for x in range(0,32)]
 
         self.speedArrowProbability=0
@@ -75,15 +68,13 @@ class ModAnalysis:
     def calcScores(self, multiplier=1):
 
         self.speedValue=self.value(self.speedDistribution, multiplier)
-        self.fertility=self.value(self.speedPerSpeedUpDistribution[4],multiplier)
-        
+                
         self.squaresValue=self.value(self.speedPerShapeDistribution["square"])
         self.diamondsValue=self.value(self.speedPerShapeDistribution["diamond"])
         self.circlesValue=self.value(self.speedPerShapeDistribution["circle"])
         self.crossesValue=self.value(self.speedPerShapeDistribution["cross"])
         self.trianglesValue=self.value(self.speedPerShapeDistribution["triangle"])
         
-
         self.r=self.squaresValue
         self.r=self.addValues(self.r, self.diamondsValue)
         self.r=self.addValues(self.r, self.circlesValue)
@@ -99,8 +90,7 @@ class ModAnalysis:
     def getScores(self):
         scores={
         "speedValue":self.speedValue,
-        "fertility":self.fertility,
-        
+                
         "squaresValue":self.squaresValue,
         "diamondsValue": self.diamondsValue,
         "circlesValue": self.circlesValue,
@@ -149,7 +139,10 @@ class ModAnalysis:
     def divideValues(self,value1,value2):
         div={}
         for value in value1:
-            div[value]=value1[value]/value2[value]
+            if value2[value]!=0:
+                div[value]=value1[value]/value2[value]
+            else:
+                div[value]="div0"
         return div
 
     def addValues(self,value1, value2):
@@ -161,8 +154,37 @@ class ModAnalysis:
     def multiplyValueByX(self,values, multiplier):
         mlt={}
         for value in values:
-            mlt[value]=values[value]*multiplier
+            if type(values[value]) == int or type(values[value]) == float:
+                mlt[value]=values[value]*multiplier
+            else:
+                mlt[value]=values[value]
         return mlt
+
+    def addAnalysis(self, analysisToAdd, multiplier=1):
+        self.speedArrowProbability+= analysisToAdd.speedArrowProbability *multiplier
+
+        for speed in range (0,32):
+            self.speedDistribution[speed]+= analysisToAdd.speedDistribution[speed] *multiplier
+            self.cdTriangleSpeedDistribution[speed]+= analysisToAdd.cdTriangleSpeedDistribution[speed] *multiplier
+        
+        shapes=Mod.getShapes()
+        for shape in shapes:
+            self.shapeDistribution[shape]+= analysisToAdd.shapeDistribution[shape] *multiplier
+
+        for shape in shapes:
+            for speed in range(0,32):
+                self.speedPerShapeDistribution[shape][speed]+= analysisToAdd.speedPerShapeDistribution[shape][speed] *multiplier
+        
+        for speedUp in range(0,6):
+            for speed in range (0,32):
+                self.speedPerSpeedUpDistribution[speedUp][speed]+= analysisToAdd.speedPerSpeedUpDistribution[speedUp][speed] *multiplier
+        
+        primaries=Mod.getPrimaries()
+
+        for shape in shapes:
+            for primary in primaries[shape]:
+                self.primaryPerShapeDistribution[shape][primary]+= analysisToAdd.primaryPerShapeDistribution[shape][primary] *multiplier
+
 
 def returnValueHigh(analysis:ModAnalysis):
     return analysis.speedValue["high"]
@@ -178,3 +200,4 @@ def returnValueElisa(analysis:ModAnalysis):
 
 def returnValueElisaM14(analysis:ModAnalysis):
     return analysis.speedValue["ElisaM14"]
+

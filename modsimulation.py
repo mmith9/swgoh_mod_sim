@@ -1,19 +1,15 @@
-from modStore import ModStore
+
 from modAnalysis import *
 from mod import Mod
-from copy import deepcopy
-from budget import Budget
 
 class ModSimulation():
     
     def __init__(self):
-        self.budget=Budget()
-        self.budget.calculateWeeklyBudget()
+        self.testlevel=0
+        self.testPrintLevel=0
 
-        pass
-
-    def walkIt(self,settings):
-
+       
+    def walkRolledMod(self,settings):
         # recursion/iteration start level           
         self.totalProbability=0
         self.branchCount=0
@@ -26,8 +22,6 @@ class ModSimulation():
         self.quickSpeedForking=self.settings["general"]["quickSpeedForking"]
 
         #start with rolling a mod from challenges
-        #self.simCost.applyChange({"modEnergy": -16 * levelProbability})
-        #self.simCost.applyChange({"credits": 7500 * levelProbability})
         self.energyChange(levelProbability, -16)
         self.creditChange(levelProbability, 7500)
 
@@ -41,8 +35,6 @@ class ModSimulation():
         newMod.secondary={}
         self.modSet=settings["general"]["modSet"]
 
-        self.testlevel=15
-        self.testPrintLevel=15
         # self.quickPrimaryForking=1
         # self.quickSecondaryForking=1
         # self.quickSpeedForking=1
@@ -53,48 +45,10 @@ class ModSimulation():
             print()
             print("total probability encountered", self.totalProbability)
             print("total recursion branches", self.branchCount)
-
-        if self.settings["modStore"]["enableShopping"]:
-
-            # energyCost=-self.analysis.avgEnergyChange
-            # creditCost=-self.analysis.avgCreditsChange
-
-           # simCosts=self.analysis.budget.getAll()
-
-            energyCost= - self.analysis.budget.getModEnergy()
-            creditCost= - self.analysis.budget.getCredits()
-
-            # energyFactor=self.settings["resources"]["dailyEnergy"]/energyCost
-            energyFactor=self.budget.getModEnergy() / energyCost
-            
-            # budget=self.settings["resources"]["dailyCredits"]-creditCost*energyFactor
-            modStoreBudget=self.budget.getCredits() - creditCost*energyFactor
-
-            if self.testlevel>10:
-                
-                print("energy",energyCost, "credits", creditCost, "factor", energyFactor)
-                print("budget for mods", modStoreBudget)
-
-            wishList=self.settings["modStore"]["wishList"]
-            modStore=ModStore()
-            boughtItems=modStore.modShopping(modStoreBudget, wishList)
-
-            item=boughtItems[0]
-            self.walkBoughtMod(item["dailyProbability"]/energyFactor, item["mod"])
-
-            if self.testlevel>10:
-                print("bought", item)
-
-            self.analysis.modStoreSpendings= item["dailyCreditCost"]
-
-#            self.creditChange(1 / energyFactor, -item["dailyCreditCost"])
-
-            self.analysis.finalCreditsBalance= self.budget.getCredits() + self.analysis.budget.getCredits() * energyFactor - self.analysis.modStoreSpendings
-            self.analysis.energyFactor=energyFactor
-
+     
         return self.analysis
     
-    def walkBoughtMod(self, levelProbability, mod:Mod):
+    def walkBoughtMod(self, levelProbability, mod:Mod, settings):
         assert(mod.pips==5)
         assert(mod.shape!="arrow")
         assert(mod.shape in Mod.shapes)
@@ -105,16 +59,33 @@ class ModSimulation():
         assert(mod.secondary["speed"][1] in [3,4,5])
         assert(mod.level==1)
         
-        self.walkSecondaryStep1(levelProbability, mod)
-        pass
+        # recursion/iteration start level           
+        self.totalProbability=0
+        self.branchCount=0
 
+        self.analysis=ModAnalysis()
+        self.settings=settings
+        self.quickPrimaryForking=self.settings["general"]["quickPrimaryForking"]
+        self.quickSecondaryForking=self.settings["general"]["quickSecondaryForking"]
+        self.quickSpeedForking=self.settings["general"]["quickSpeedForking"]
+
+        self.walkSecondaryStep1(levelProbability, mod)
+
+        return self.analysis
+        
     def energyChange(self, levelProbability, change):
-        #self.analysis.avgEnergyChange+=levelProbability*change
         self.analysis.budget.applyChange({"modEnergy": levelProbability*change })
 
     def creditChange(self, levelProbability, change):
-        #self.analysis.avgCreditsChange+=levelProbability*change
         self.analysis.budget.applyChange({"credits": levelProbability*change})
+
+    def budgetChange(self, levelProbability, changes):
+        for change in changes:
+            self.analysis.budget.applyChange({change: changes[change] * levelProbability })
+
+    def budgetDeduct(self, levelProbability, changes):
+        for change in changes:
+            self.analysis.budget.applyChange({change: (-1) * changes[change] * levelProbability })
 
     def walkEND(self,probability):
         self.totalProbability+=probability
@@ -138,7 +109,34 @@ class ModSimulation():
             
     def walkShapes(self,levelProbability, mod:Mod):
         newMod=self.copyMod(mod)
-        for shape in Mod.shapeProbability:
+
+        bundledShapes=[]
+        notBundledShapes=["square", "diamond", "circle", "arrow", "triangle", "cross"]
+
+        if (self.settings["general"]["quickSDCForking"] == 1):
+            bundledShapes=["square", "diamond", "circle"]
+            notBundledShapes=["arrow", "triangle", "cross"]
+        
+        if (self.settings["general"]["quickSDCandCForking"] == 1):
+            bundledShapes=["square", "diamond", "circle", "cross"]
+            notBundledShapes=["arrow", "triangle"]
+        
+        if (self.settings["general"]["quickSDCCTForking"] == 1):
+            bundledShapes=["square", "diamond", "circle", "cross", "triangle"]
+            notBundledShapes=["arrow"]
+
+        bundledShapesProbability=0
+        for shape in bundledShapes:
+            bundledShapesProbability+= Mod.shapeProbability[shape]
+
+        if bundledShapesProbability > 0:
+            if self.testlevel>2:
+                print("| SDC(c) |", end="")
+
+            newMod.shape=bundledShapes[0]
+            self.walkGrades(bundledShapesProbability /100 *levelProbability, newMod)
+
+        for shape in notBundledShapes:
             if self.testlevel>2:
                 print("|", shape, "|", end="")
             if Mod.shapeProbability[shape]!=0:
@@ -340,6 +338,25 @@ class ModSimulation():
         assert("speed" in mod.secondary)
 
         speedBumps=mod.secondary["speed"][0]
+
+        ### HOTFIX
+        for x in self.settings["minSpeedToSlice"].keys():
+            if type(x) == str:
+                if speedBumps==0:
+                    speedBumps="0"
+                elif speedBumps==1:
+                    speedBumps="1"
+                elif speedBumps==2:
+                    speedBumps="2"
+                elif speedBumps==3:
+                    speedBumps="3"
+                elif speedBumps==4:
+                    speedBumps="4"
+                elif speedBumps==5:
+                    speedBumps="5"
+            break
+            
+           
         modSpeed=mod.secondary["speed"][1]
 
         isSpeedBumpMissed=(mod.getSecondaryStatIncreaseCount() != mod.secondary["speed"][0] -1)
@@ -347,6 +364,7 @@ class ModSimulation():
         isMinSpeedToSlice= (self.settings["minSpeedToSlice"][speedBumps][mod.grade][mod.shape] <= modSpeed)
         isMinSpeedToKeep= (self.settings["minSpeedToKeep"][speedBumps][mod.grade][mod.shape] <= modSpeed)
         isMaxGrade= (mod.grade=="a")
+        
 
         shouldSlice=True
         shouldSlice=shouldSlice and not isMaxGrade
@@ -355,9 +373,14 @@ class ModSimulation():
 
         if shouldSlice:
             self.walkSliceUp(levelProbability, mod)
-        elif (isMinSpeedToKeep):
+
+        elif isMaxGrade and self.settings["general"]["enable6DotSlicing"]==1 :
+            self.walkSliceUp6DotStep1(levelProbability, mod)
+
+        elif isMinSpeedToKeep:
             self.analysis.analyzeMod(levelProbability, mod)
             self.walkEND(levelProbability)   
+
         else:
             self.sellMod(levelProbability, mod)
             self.walkEND(levelProbability)
@@ -387,7 +410,97 @@ class ModSimulation():
         newMod.grade=Mod.grades[Mod.grades.index(newMod.grade)+1]
         
         self.walkIncreaseExistingStat(levelProbability, newMod, self.walkSliceUpStep1)
+
+    def walkSliceUp6DotStep1(self, levelProbability, mod:Mod): #DECISION POINT
+
+        assert("speed" in mod.secondary)
+        assert(mod.grade in ["a", "6e", "6d", "6c", "6b", "6a"])
+
+        modSpeed=mod.secondary["speed"][1]
+        speedBumps=mod.secondary["speed"][0]
+        isMaxSpeedBumps= (speedBumps == 5)
+        
+        ### HOTFIX
+        for x in self.settings["minSpeedToSlice"].keys():
+            if type(x) == str:
+                if speedBumps==0:
+                    speedBumps="0"
+                elif speedBumps==1:
+                    speedBumps="1"
+                elif speedBumps==2:
+                    speedBumps="2"
+                elif speedBumps==3:
+                    speedBumps="3"
+                elif speedBumps==4:
+                    speedBumps="4"
+                elif speedBumps==5:
+                    speedBumps="5"
+            break
+ 
+
+        isSpeedBumpMissed= (mod.getSecondaryStatIncreaseCount() != mod.secondary["speed"][0] -1)
+        isMissAllowed= (self.settings["general"]["allowSpeedBumpMisses"]==1)
+
+        isMinSpeedToSlice= (self.settings["minSpeedToSlice"][speedBumps][mod.grade][mod.shape] <= modSpeed)
+        isMinSpeedToKeep= (self.settings["minSpeedToKeep"][speedBumps][mod.grade][mod.shape] <= modSpeed)
+        isMaxGrade= (mod.grade=="6a")
+
+        shouldSlice=True
+        shouldSlice=shouldSlice and not isMaxGrade
+        shouldSlice=shouldSlice and not isMaxSpeedBumps
+        shouldSlice=shouldSlice and (isSpeedBumpMissed or isMissAllowed)
+        shouldSlice=shouldSlice and isMinSpeedToSlice
+
+        if shouldSlice:
+            self.walkSliceUp6Dot(levelProbability, mod)
+
+        elif isMinSpeedToKeep:
+            self.analysis.analyzeMod(levelProbability, mod)
+            self.walkEND(levelProbability)   
             
+        else:
+            self.sellMod(levelProbability, mod)
+            self.walkEND(levelProbability)
+
+    def walkSliceUp6Dot(self,levelProbability, mod:Mod):
+        newMod=self.copyMod(mod)
+        assert(newMod.secondary["speed"][0] < 5)
+
+        if self.testlevel>=106:
+            if self.testPrintLevel==106:
+                self.printModChance(levelProbability, mod)
+            self.walkEND(levelProbability)
+
+        assert(newMod.level==12 or newMod.level==15)
+        if newMod.level==12:
+            cost=0
+            for x in range (0,3):
+                cost+=Mod.modLevelingCost[newMod.pips][newMod.level+x]
+            self.creditChange(levelProbability, -cost)
+            newMod.level+=3
+
+        cost=Mod.modSlicingCost[newMod.grade]
+        #self.budgetChange(levelProbability, cost)
+        self.budgetDeduct(levelProbability, cost)
+
+        if self.testlevel > 15:
+            print()
+            self.printModChance(levelProbability, newMod)
+            print("cost", cost)
+    
+
+        if newMod.grade=="a":
+            newMod.grade="6e"
+            newMod.pips=6
+            newMod.secondary["speed"][1]+=1
+            self.walkSliceUp6DotStep1(levelProbability, newMod)
+
+        else:
+            assert(newMod.grade!="6a")
+            
+            newMod.grade=Mod.grades6Dot[ Mod.grades6Dot.index(newMod.grade)+1 ]
+            self.walkIncreaseExistingStat(levelProbability, newMod, self.walkSliceUp6DotStep1)
+
     def getSecondaryStatIncreaseCount(self,secondary):
         count=0
         for stat in secondary:
