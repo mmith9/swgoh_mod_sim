@@ -6,8 +6,10 @@ import json
 class SimSettings:
 
     def __init__(self):
+        self.testlevel=1
 
         self.iterationCount=0
+        self.fileCount=0
         
         self.general={
             "sellAccuracyArrows":1, "keepSpeedArrows":1, "ignoreRestOfArrows":1
@@ -15,7 +17,7 @@ class SimSettings:
             ,"allowSpeedBumpMisses":1
             ,"enable6DotSlicing":1
             ,"convertMats1-4ToEnergy":1
-            ,"creditsLimit":"half"
+            ,"creditsLimit":"half", "shipCreditsLimit":"half"
             ,"modSet":"offense"
             ,"quickPrimaryForking":1, "quickSecondaryForking":1, "quickSpeedForking":1
             ,"quickSDCForking":1, "quickSDCandCForking":1, "quickSDCCTForking":1
@@ -62,10 +64,9 @@ class SimSettings:
                 for shape in Mod.shapes:
                     self.minSpeedToKeep[speedBumps][grade][shape]=0
 
-
-    # NECCESARY FOR MULTIPROCESSING
-    # modsimulation takes argument in this form, objects are bad, dictionaries are ok
     def getAll(self):
+        # NECCESARY FOR MULTIPROCESSING
+        # modsimulation takes argument in this form, objects are bad, dictionaries are ok
         settings={
 
             "general" : self.general
@@ -77,8 +78,8 @@ class SimSettings:
         }
         return settings
 
-    # example:  settings.set("minSpeedToSlice", grade=any, shape=any,)
-    def set(self, target, value, grade="any", shape="any", speedBumps="any"):       
+    def set(self, target, value, grade="any", shape="any", speedBumps="any"):      
+        # example:  settings.set("minSpeedToSlice", grade=any, shape=any,)
         if grade=="any":
             if target in ["minSpeedToKeep", "minSpeedToSlice"]:
                 for gradeExpand in Mod.allGrades:
@@ -127,7 +128,7 @@ class SimSettings:
         if target=="minSpeedToKeep":
             self.minSpeedToKeep[speedBumps][grade][shape]=value
 
-    def iterate(self, iterateList, listPosition=0, iteratedList=[], countBranchOnly=0, benchmarkPercent=0, outputPrefix="none", fileCut=0):
+    def iterateSettingsByList(self, iterateList, listPosition=0, iteratedList=[], countBranchOnly=0, benchmarkPercent=0, outputPrefix="none", fileCut=0, sanityConstraint=0):
         if listPosition==0:
             self.iterationCount=0
 
@@ -137,14 +138,22 @@ class SimSettings:
            
             for x in currentIteration["range"]:
                 self.set(currentIteration["target"], x, grade=currentIteration["grade"], shape=currentIteration["shape"], speedBumps=currentIteration["speedBumps"])
-                self.iterate(iterateList, listPosition+1, iteratedList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut)
+                self.iterateSettingsByList(iterateList, listPosition+1, iteratedList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut, sanityConstraint)
 
         #nope all on list has been iterated 
         else:
-            self.iterationCount+=1
-            if countBranchOnly>0:
+            if (self.testlevel>0) and (self.iterationCount % 1000 == 0):
+                print(".", end="")
+                
+            if (sanityConstraint==1) and not self.iterateCheckSanity() :
                 pass
+
+            elif countBranchOnly>0 :
+                self.iterationCount+=1
+                pass
+
             else:
+                self.iterationCount+=1
                 if benchmarkPercent>0:
                     if (self.iterationCount % (benchmarkPercent*100) == 0):
                         self.iterateStep2(iteratedList, outputPrefix, fileCut)
@@ -173,11 +182,10 @@ class SimSettings:
         settingsCopy=deepcopy(self.getAll())
         iteratedList.append([self.iterationCount, settingsCopy])
 
-
-
     def iterateSaveToFiles(self, iteratedList, outputPrefix, fileCut):
         if fileCut>0:
-            cutFileName="iteration_results/"+outputPrefix+str(math.trunc(self.iterationCount/fileCut))+"x"+str(fileCut)+".json"
+            cutFileName="iteration_results/"+outputPrefix+str(self.fileCount)+"x"+str(fileCut)+".json"
+            self.fileCount+=1
         else:
            cutFileName="iteration_results/"+outputPrefix+".json"
     
@@ -185,3 +193,47 @@ class SimSettings:
             json.dump(iteratedList, fp)
         iteratedList.clear()
 
+    def iterateCheckSanity(self):
+        #print("sanity check")
+        sanity=True
+
+        # actually no sense, can set to 0 and let min inital speed for grey do the job
+        #
+        # first, minSpeedToSlice for grey >= minInitialSpeed for grey
+        #for shape in Mod.shapes:
+        #    sanity=sanity and (self.minSpeedToSlice[1]["e"][shape] >= self.minInitialSpeed["e"][shape])
+
+
+        #checking if minSpeedToSlice for speedBumps and grade satisfies <= for speedBumps+1 or grade+1, but ignore if 0 as those are not iterated and relevant
+        # 
+        #
+        for speedBumps in range(0,6) :
+            for grade in ["e", "d", "c", "b"]:
+                nextGrade=Mod.grades[Mod.grades.index(grade)+1]
+                for shape in Mod.shapes:
+
+                    tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+                    tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
+                    sanity=sanity and tmpBool
+
+                    if (self.testlevel == 2) and not tmpBool:
+                        print(speedBumps, grade, nextGrade, shape)
+                        print(self.minSpeedToSlice[speedBumps][grade][shape])
+                        print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
+
+                    
+        for speedBumps in range(0,5) :
+            for grade in ["e", "d", "c", "b", "a"]:
+                for shape in Mod.shapes:
+
+                    tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+                    tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps+1][grade][shape])
+                    sanity=sanity and tmpBool
+
+                    if (self.testlevel == 4) and not tmpBool:
+                        print(speedBumps, speedBumps+1, grade, shape, Mod.grades.index(grade))
+                        print(self.minSpeedToSlice[speedBumps][grade][shape])
+                        print(self.minSpeedToSlice[speedBumps+1][grade][shape])
+
+
+        return sanity

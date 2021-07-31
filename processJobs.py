@@ -2,27 +2,35 @@ import json
 import multiprocessing
 from budgeted_evaluation import *
 import os
+from datetime import datetime
+import psutil
+testlevel=10
 
 class JobsProcessing:
     def __init__(self):
-
+        self.results=[] 
         pass
 
     def processFiles(self, inputPrefix="ITER", outputPrefix="EVAL", filesTotal=0, fileCut=1000, multiproc=False):
 
-        for filenum in range(1,filesTotal+1):
+        for filenum in range(0, filesTotal):
+            start_time = datetime.now()
+            print("processing file:", filenum,"out of", filesTotal)
             jobsFilename="iteration_results/"+inputPrefix+str(filenum)+"x"+str(fileCut)+".json"
             outputFilename="iteration_results/"+outputPrefix+str(filenum)+"x"+str(fileCut)+".json"
-            with open(jobsFilename, "r") as fp:
-                jobsList=json.load(fp)
+            
             
             if os.path.isfile(outputFilename):
                 pass
             else:
+                with open(jobsFilename, "r") as fp:
+                    jobsList=json.load(fp)
+                    
                 results=self.processJobsList(jobsList, multiproc=multiproc)
                 with open(outputFilename, "w") as fp:
                     json.dump(results, fp)
-
+            end_time = datetime.now()
+            print('Duration: {}'.format(end_time - start_time))
 
     def processJobsList(self, jobsList, multiproc=False):
 
@@ -43,14 +51,30 @@ class JobsProcessing:
             results=self.processJobsListMulti(jobsList)
             return results
 
-    def readResults(self, inputPrefix="EVAL", filesTotal=0, fileCut=1000):
+    def readResults(self, inputPrefix="FILTER", filesTotal=0):
         self.results=[]
+        if testlevel>0:
+            print(psutil.virtual_memory())
 
-        for filenum in range(1,filesTotal+1):
-            outputFilename="iteration_results/"+inputPrefix+str(filenum)+"x"+str(fileCut)+".json"
-            with open(outputFilename, "r") as fp:
-                resultsCut=json.load(fp)
-                self.results+= resultsCut      
+        for filenum in range(0, filesTotal):
+            if testlevel>0:
+                startUsedMem=psutil.virtual_memory()[3]
+                print("file ", filenum +1 , "out of", filesTotal)
+            inputFilename="iteration_results/"+inputPrefix + "x" + str(filenum) + ".json"
+            
+            if testlevel>0:
+                print("trying", inputFilename)
+
+            if os.path.isfile(inputFilename):
+                with open(inputFilename, "r") as fp:
+                    resultsCut=json.load(fp)
+                    self.results+= resultsCut      
+
+                if testlevel>0:
+                    print(psutil.virtual_memory())
+                    endUsedMem=psutil.virtual_memory()[3]
+                    print("mem diff:",(startUsedMem-endUsedMem)/ 1024,"Kb")
+                    print()
 
     def displayResults(self, linesMax=40):
         lines=0
@@ -92,38 +116,157 @@ class JobsProcessing:
 
             print("job number ", jobNum, " scores: ",end="", sep="")
             for score in jobScores["speedValue"]:
-                print(score,":",jobScores["speedValue"][score], " ", end="",sep="")
+                print(score,":", f'{truncate(jobScores["speedValue"][score],3):,}' , " ", end="",sep="")
             print()
+
+            print("Budget remaining")
+            for item in ["credits", "shipCredits", "modEnergy", "amplifier", "capacitor", "module", "unit", "resistor", "microprocessor"]:
+                print(item,":", truncate(jobScores["budgetBreakdown"]["budgetRemaining"][item], 3), " ", end="")
+            print("| Cap Amp bought:", truncate(jobScores["budgetBreakdown"]["capAmpBought"], 3))
+           
 
             print("uncover stats on grey", jobSettings["uncoverStatsLimit"]["e"]["square"])
             print("minInitialSpeed on grey", jobSettings["minInitialSpeed"]["e"]["square"])
-            print("minSpeedToKeep", jobSettings["minSpeedToKeep"]["1"]["e"]["square"])
+            #FILTERED print("minSpeedToKeep", jobSettings["minSpeedToKeep"]["1"]["e"]["square"])
             print("minSpeedToSlice:")
 
-            for grade in Mod.grades:
+            for grade in Mod.allGrades:
                 print("grade:", grade," ", end="",sep="")
                 for speedBumps in Mod.speedBumpsStr:
-                    if (Mod.speedBumpsStr.index(speedBumps) <= Mod.grades.index(grade)+1) and (speedBumps!="5"):
-                        speed=jobSettings["minSpeedToSlice"][speedBumps][grade]["square"]
-                        bumps=int(speedBumps)
+                    if (Mod.speedBumpsStr.index(speedBumps) <= Mod.allGrades.index(grade)+1) and (speedBumps!="5"):
 
-                        if speed <= 5+6*(bumps-1):
-                            print("\t",speedBumps,":", jobSettings["minSpeedToSlice"][speedBumps][grade]["square"]," ", end="",sep="")
-                        else:
-                            print("\t",end="",sep="")
+                        if speedBumps in jobSettings["minSpeedToSlice"].keys():
+                            if grade in jobSettings["minSpeedToSlice"][speedBumps].keys():
+
+
+                                speed=jobSettings["minSpeedToSlice"][speedBumps][grade]["square"]
+                                bumps=int(speedBumps)
+
+                                if speed <= 5+6*(bumps-1)+100:
+                                    print("\t",speedBumps,":", jobSettings["minSpeedToSlice"][speedBumps][grade]["square"]," ", end="",sep="")
+                                else:
+                                    print("\t",end="",sep="")
                    
                 print()
+            print()
+
+    def filterOutIrrelevantCrap(self, inputPrefix="EVAL", outputPrefix="FILTER", fileCut=5000):
+        # filtering required because of memory limitations
+
+        fileNum=0
+        inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + "x" + str(fileCut) + ".json"
+        
+        if testlevel>0:
+            print("trying to filter", inputFileName)
+
+        while os.path.isfile(inputFileName):
+            outputFileName="iteration_results/" + outputPrefix + "x" + str(fileNum) + ".json"
+            if os.path.isfile(outputFileName):
+                print("skipping")
+                pass
+
+            else:
+                with open(inputFileName, "r") as fp:
+                    results=json.load(fp)
+                
+                if testlevel>0:
+                    print("filtering")
+
+                for result in results:
+
+                    del(result["settings"]["general"])
+                    del(result["settings"]["modStore"])
+                    
+                    del(result["settings"]["minInitialSpeed"]["d"])
+                    del(result["settings"]["minInitialSpeed"]["c"])
+                    del(result["settings"]["minInitialSpeed"]["b"])
+                    del(result["settings"]["minInitialSpeed"]["a"])
+
+                    del(result["settings"]["uncoverStatsLimit"]["d"])
+                    del(result["settings"]["uncoverStatsLimit"]["c"])
+                    del(result["settings"]["uncoverStatsLimit"]["b"])
+                    del(result["settings"]["uncoverStatsLimit"]["a"])
+
+                    for shape in ["arrow", "diamond", "circle", "cross", "triangle"]:
+                        del(result["settings"]["uncoverStatsLimit"]["e"][shape])
+                        del(result["settings"]["minInitialSpeed"]["e"][shape])
+
+                    del(result["settings"]["minSpeedToKeep"])
+                
+                    del(result["settings"]["minSpeedToSlice"]["0"])
+                    del(result["settings"]["minSpeedToSlice"]["5"])
+                    
+                    for grade in ["d", "c", "b", "a", "6e" , "6d", "6c", "6b", "6a"]:
+                        del(result["settings"]["minSpeedToSlice"]["1"][grade])
+
+                    for speedBumps in ["2"]:                                     ##, "3", "4" ]:
+                        for grade in ["6e", "6d", "6c", "6b", "6a"]:
+                            del(result["settings"]["minSpeedToSlice"][speedBumps][grade])
+                    
+                    for speedBumps in result["settings"]["minSpeedToSlice"]:
+                        for grade in result["settings"]["minSpeedToSlice"][speedBumps]:
+                            for shape in ["arrow", "diamond", "circle", "cross", "triangle"]:
+                                del(result["settings"]["minSpeedToSlice"][speedBumps][grade][shape])
+
+                    del(result["scores"]["squaresValue"])
+                    del(result["scores"]["diamondsValue"])
+                    del(result["scores"]["circlesValue"])
+                    del(result["scores"]["crossesValue"])
+                    del(result["scores"]["trianglesValue"])
+
+                    del(result["scores"]["rltilt"])
+                    del(result["scores"]["targetability"])
+
+                    del(result["scores"]["budgetBreakdown"]["budgetRoll"])
+                    del(result["scores"]["budgetBreakdown"]["budgetBuy"])
+                    del(result["scores"]["budgetBreakdown"]["Rbought"])
+                    del(result["scores"]["budgetBreakdown"]["Bbought"])
+
+                if testlevel>0 :
+                    print("saving ", outputFileName)
+                    
+                with open(outputFileName, "w") as fp:
+                    json.dump(results, fp)
             
+            fileNum+= 1
+            inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + "x" + str(fileCut) + ".json"
+
+    def filterByX(self, filter="none", value="none"):
+        filteredJob=JobsProcessing()
+
+        if filter=="uncoverStatsLimit":
+            for job in self.results:
+                jobSettings=job["settings"]
+                if jobSettings["uncoverStatsLimit"]["e"]["square"] == value:
+                    filteredJob.results.append(job)
+
+        if filter=="microprocessor":
+            for job in self.results:
+                jobScores=job["scores"]
+                if jobScores["budgetBreakdown"]["budgetRemaining"]["microprocessor"] > value:
+                    filteredJob.results.append(job)
+
+        return filteredJob
+
+
+
 
 
 def wrapperFunc(job):
     jobNumber=job[0]
     jobSettings=job[1]
-        
+    
+    if testlevel>0:
+        print(jobNumber, end="|")
+
     evaluation=BudgetedEvaluation()
     output=evaluation.evaluateWithBudget(jobSettings)
     
     return {"job":jobNumber, "settings":jobSettings, "scores":output}
+
+def truncate(number, digits) -> float:
+    stepper = 10.0 ** digits
+    return math.trunc(stepper * number) / stepper
 
 def rtValueHigh(x):
     return x["scores"]["speedValue"]["high"]

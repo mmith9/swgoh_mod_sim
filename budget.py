@@ -3,7 +3,7 @@ class Budget:
 
     def __init__(self):
         
-        self.testlevel=4
+        self.testlevel=0
         
         self.slice5Mats=["pin","disk","chip","coil","amplifier","capacitor","modulator"]
         self.slice6Mats=["module","unit","resistor","microprocessor"]
@@ -180,7 +180,7 @@ class Budget:
 
     def getEssential(self):
         essential={}
-        for mat in ["credits", "modEnergy", "amplifier", "capacitor", "module", "unit", "resistor", "microprocessor"]:
+        for mat in ["credits", "shipCredits", "modEnergy", "amplifier", "capacitor", "module", "unit", "resistor", "microprocessor"]:
             essential[mat]=self.resources[mat]
         return essential
 

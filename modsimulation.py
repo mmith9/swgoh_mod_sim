@@ -90,8 +90,9 @@ class ModSimulation():
     def walkEND(self,probability):
         self.totalProbability+=probability
         self.branchCount+=1
-        if (self.branchCount % 1000) == 0:
-            print(".", end = "")
+        if self.testlevel>0:
+            if (self.branchCount % 1000) == 0:
+                print(".", end = "")
 
     def walkPips(self,levelProbability, mod:Mod):
         #newMod=deepcopy(mod)

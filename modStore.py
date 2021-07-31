@@ -85,7 +85,7 @@ class ModStore:
         return modInListCount/self.storeModCount
 
     def getModPrice(self, currency="credits"):
-        level15modCost={"credits": 4158400, "ship":1910000}
+        level15modCost={"credits": 3910000, "shipCredits":1910000}
         return level15modCost[currency]
 
     def modShopping(self, wishList, budget=0, currency="credits"):
