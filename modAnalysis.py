@@ -98,7 +98,10 @@ class ModAnalysis:
         "trianglesValue": self.trianglesValue,
 
         "rltilt": self.rltilt,
-        "targetability": self.targetability
+        "targetability": self.targetability,
+
+        "speedDistribution": self.speedDistribution
+        
         }
         
         return scores

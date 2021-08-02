@@ -125,8 +125,9 @@ class JobsProcessing:
             print("| Cap Amp bought:", truncate(jobScores["budgetBreakdown"]["capAmpBought"], 3))
            
 
-            print("uncover stats on grey", jobSettings["uncoverStatsLimit"]["e"]["square"])
-            print("minInitialSpeed on grey", jobSettings["minInitialSpeed"]["e"]["square"])
+            print("uncover stats on grey:", jobSettings["uncoverStatsLimit"]["e"]["square"], end="")
+            print(" |minInitialSpeed on grey:", jobSettings["minInitialSpeed"]["e"]["square"], end="")
+            print(" |avg roll energy cost:",jobScores["budgetBreakdown"]["avgRollModEnergyCost"])
             #FILTERED print("minSpeedToKeep", jobSettings["minSpeedToKeep"]["1"]["e"]["square"])
             print("minSpeedToSlice:")
 
@@ -217,10 +218,12 @@ class JobsProcessing:
                     del(result["scores"]["rltilt"])
                     del(result["scores"]["targetability"])
 
+                    result["scores"]["budgetBreakdown"]["avgRollModEnergyCost"]=result["scores"]["budgetBreakdown"]["budgetRoll"]["modEnergy"]                    
                     del(result["scores"]["budgetBreakdown"]["budgetRoll"])
                     del(result["scores"]["budgetBreakdown"]["budgetBuy"])
                     del(result["scores"]["budgetBreakdown"]["Rbought"])
                     del(result["scores"]["budgetBreakdown"]["Bbought"])
+                    del(result["scores"]["speedDistribution"])
 
                 if testlevel>0 :
                     print("saving ", outputFileName)
@@ -280,5 +283,5 @@ def rtValueLow(x):
 def rtValueElisa(x):
     return x["scores"]["speedValue"]["Elisa"]
 
-def rtValueElsiaM14(x):
+def rtValueElisaM14(x):
     return x["scores"]["speedValue"]["ElisaM14"]
