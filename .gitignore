@@ -1,4 +1,6 @@
 /mod_simulationOLD.py
+/test_*.py
 /test_mod.py
 /test_something.py
 /__pycache__
+iteration_results/*
