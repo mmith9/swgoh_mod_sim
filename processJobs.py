@@ -4,6 +4,7 @@ from budgeted_evaluation import *
 import os
 from datetime import datetime
 import psutil
+import mysql.connector
 testlevel=10
 
 class JobsProcessing:
@@ -16,8 +17,8 @@ class JobsProcessing:
         for filenum in range(0, filesTotal):
             start_time = datetime.now()
             print("processing file:", filenum,"out of", filesTotal)
-            jobsFilename="iteration_results/"+inputPrefix+str(filenum)+"x"+str(fileCut)+".json"
-            outputFilename="iteration_results/"+outputPrefix+str(filenum)+"x"+str(fileCut)+".json"
+            jobsFilename="iteration_results/"+inputPrefix+str(filenum)+".json"
+            outputFilename="iteration_results/"+outputPrefix+str(filenum)+".json"
             
             
             if os.path.isfile(outputFilename):
@@ -155,7 +156,7 @@ class JobsProcessing:
         # filtering required because of memory limitations
 
         fileNum=0
-        inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + "x" + str(fileCut) + ".json"
+        inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + ".json"
         
         if testlevel>0:
             print("trying to filter", inputFileName)
@@ -174,6 +175,9 @@ class JobsProcessing:
                     print("filtering")
 
                 for result in results:
+
+                    if testlevel>15:
+                        print("settings size", len(json.dumps(result["scores"])))
 
                     del(result["settings"]["general"])
                     del(result["settings"]["modStore"])
@@ -232,7 +236,7 @@ class JobsProcessing:
                     json.dump(results, fp)
             
             fileNum+= 1
-            inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + "x" + str(fileCut) + ".json"
+            inputFileName="iteration_results/" + inputPrefix + "x" + str(fileNum) + ".json"
 
     def filterByX(self, filter="none", value="none"):
         filteredJob=JobsProcessing()
@@ -250,6 +254,49 @@ class JobsProcessing:
                     filteredJob.results.append(job)
 
         return filteredJob
+
+    def loadTopResultsFromDb(self, maxTopResults=100):
+
+        mysqlDatabaseName="swgoh_sim_results"
+        mysqlUser=os.environ.get("mysql_user")
+        mysqlPassword=os.environ.get("mysql_password")
+
+        try:
+            with mysql.connector.connect(
+                host="localhost",
+                user=mysqlUser,
+                password=mysqlPassword,
+                database=mysqlDatabaseName,
+                ) as connection:
+                cursor=connection.cursor()
+
+                for valueFunc in ["high", "mid", "low", "Elisa", "ElisaM14"]:
+                    select_top_scores_query="SELECT fingerprint, hash, settings, scores, score_"+valueFunc+" FROM sim_results ORDER BY score_"+valueFunc+" DESC LIMIT "+str(maxTopResults)
+                    if testlevel>1 :
+                        print(select_top_scores_query)
+                    cursor.execute(select_top_scores_query)
+                    results=cursor.fetchall()
+
+                    for result in results:
+                        if testlevel>15:
+                            print(".",end="")
+                        fingerprint=result[0]
+                        hash=result[1]
+                        settings=json.loads(result[2])
+                        scores=json.loads(result[3])
+
+                        if "avgRollModEnergyCost" not in scores["budgetBreakdown"].keys():
+                            scores["budgetBreakdown"]["avgRollModEnergyCost"]=scores["budgetBreakdown"]["budgetRoll"]["modEnergy"]   
+
+                        tmpDict={}
+                        tmpDict["job"]={"fingerprint":fingerprint, "hash":hash}
+                        tmpDict["settings"]=settings
+                        tmpDict["scores"]=scores
+                        self.results.append(tmpDict)
+
+        except mysql.connector.Error as e:
+            print(e)     
+            
 
 
 
@@ -285,3 +332,4 @@ def rtValueElisa(x):
 
 def rtValueElisaM14(x):
     return x["scores"]["speedValue"]["ElisaM14"]
+

@@ -1,7 +1,7 @@
 from mod import Mod
 from copy import deepcopy
-import math
 import json
+import binascii
 
 class SimSettings:
 
@@ -152,6 +152,12 @@ class SimSettings:
 
             elif countBranchOnly>0 :
                 self.generatedSettings+=1
+
+                if self.testlevel>2:
+                    print(self.settingsFingerprint()," ", end="")
+                    print(self.settingsHash())
+                    print("fingerprint:",len(self.settingsFingerprint()), "settings:", len(json.dumps(self.getAll())))
+
                 if (self.testlevel>0) and (self.generatedSettings % 10000 == 0):
                     print("*", end="")
                 pass
@@ -187,11 +193,11 @@ class SimSettings:
 
     def iterateStep2(self, iteratedList, outputPrefix, fileCut ):
         settingsCopy=deepcopy(self.getAll())
-        iteratedList.append([self.generatedSettings, settingsCopy])
+        iteratedList.append([self.generatedSettings, settingsCopy, self.settingsFingerprint(), self.settingsHash()])
 
     def iterateSaveToFiles(self, iteratedList, outputPrefix, fileCut):
         if fileCut>0:
-            cutFileName="iteration_results/"+outputPrefix+str(self.fileCount)+"x"+str(fileCut)+".json"
+            cutFileName="iteration_results/"+outputPrefix+str(self.fileCount)+".json"
             self.fileCount+=1
         else:
            cutFileName="iteration_results/"+outputPrefix+".json"
@@ -266,3 +272,54 @@ class SimSettings:
                         print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
 
         return sanity
+
+    def settingsFingerprint(self) -> str:
+        return SimSettings.settingsFingerprintOfGetAll(self.getAll())
+        
+    def settingsFingerprintOfGetAll(settings) -> str:
+        fingerprint=""
+        
+        ### HOTFIX
+        bump1=1
+        bump2=2
+        bump3=3
+        bumpRange=range(1,5)
+
+        for x in settings["minSpeedToSlice"].keys():
+            if type(x) == str:
+                bump1="1"
+                bump2="2"
+                bump3="3"
+                bumpRange=["1", "2", "3", "4"]
+            break                 
+
+        fingerprint+=str(settings["uncoverStatsLimit"]["e"]["square"])
+        fingerprint+=str(settings["uncoverStatsLimit"]["d"]["square"])
+        
+        fingerprint+=str(settings["minInitialSpeed"]["e"]["square"])
+        fingerprint+=str(settings["minInitialSpeed"]["d"]["square"])
+
+        fingerprint+=str(settings["minSpeedToSlice"][bump1]["e"]["square"])
+
+        fingerprint+=str(settings["minSpeedToSlice"][bump1]["d"]["square"])
+        fingerprint+=str(settings["minSpeedToSlice"][bump2]["d"]["square"])
+
+        fingerprint+=str(settings["minSpeedToSlice"][bump1]["c"]["square"])
+        fingerprint+=str(settings["minSpeedToSlice"][bump2]["c"]["square"])
+        fingerprint+=str(settings["minSpeedToSlice"][bump3]["c"]["square"])
+        
+        
+
+        for grade in ["a", "6e", "6d", "6c", "6b"]:
+            for speedBumps in bumpRange:
+                fingerprint+=str(settings["minSpeedToSlice"][speedBumps][grade]["square"])
+        
+        return fingerprint
+
+    def settingsHash(self) -> int:
+        return SimSettings.settingsHashOfGetAll(self.getAll())
+    
+    def settingsHashOfGetAll(settings) -> int:
+        return binascii.crc32(bytes(json.dumps(settings), "utf-8"))
+    
+

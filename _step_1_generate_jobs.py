@@ -81,10 +81,10 @@ iterateList=[
     {"target":"minSpeedToSlice", "range":[16,17,18] , "shape":"any", "grade":"6b", "speedBumps":4}, 
 ]
 
-output=test.iterateSettingsByList(iterateList, outputPrefix="ITER06x", fileCut=5000, sanityConstraint=1)
+#output=test.iterateSettingsByList(iterateList, outputPrefix="ITER06x", fileCut=500, sanityConstraint=1)
 
 #output=test.iterateSettingsByList(iterateList, benchmarkPercent=1 , outputPrefix="ITER06x", fileCut=5000, sanityConstraint=1)
-#output=test.iterateSettingsByList(iterateList, countBranchOnly=1, sanityConstraint=1)
+output=test.iterateSettingsByList(iterateList, countBranchOnly=1, sanityConstraint=1)
 
 
 print(output)
