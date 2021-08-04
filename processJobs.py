@@ -1,5 +1,7 @@
 import json
 import multiprocessing
+import math
+from re import L
 from budgeted_evaluation import *
 import os
 from datetime import datetime
@@ -296,11 +298,72 @@ class JobsProcessing:
 
         except mysql.connector.Error as e:
             print(e)     
+    
+    def filterOutJobsInDb(self, filesTotal=30, inputPrefix="ITER", outputPrefix="ITERUNIQ"):
+        mysqlDatabaseName="swgoh_sim_results"
+        mysqlUser=os.environ.get("mysql_user")
+        mysqlPassword=os.environ.get("mysql_password")
+        fileNum=0
+        jobsList=[]
+
+        while fileNum<filesTotal:
+            inputFilename="iteration_results/"+inputPrefix + "x" + str(fileNum) + ".json"
+            outputFilename="iteration_results/"+outputPrefix + "x" + str(fileNum) + ".json"            
+            fileNum+= 1
             
+            print("trying file:", inputFilename)
+            if os.path.isfile(outputFilename):
+                print("skipping, output file allready exists")
+            if os.path.isfile(inputFilename) and not os.path.isfile(outputFilename) :
+                print("Reading file ", inputFilename)
+                with open(inputFilename, "r") as fp:
+                    jobsList=json.load(fp)
 
+                uniqueJobsList=[]
+                uniqueJobsCount=0
+                allJobsCount=0
+                try:
+                    with mysql.connector.connect(
+                        host="localhost",
+                        user=mysqlUser,
+                        password=mysqlPassword,
+                        database=mysqlDatabaseName,
+                    ) as connection:
+                        cursor=connection.cursor()
 
+                        for job in jobsList:
+                            allJobsCount+= 1
+                            jobNum=job[0]
+                            jobSettings=job[1]
+                            jobFingerprint=job[2]
+                            jobHash=job[3]
+                            
+                            fingerprint=SimSettings.settingsFingerprintOfGetAll(jobSettings)
+                            hash=SimSettings.settingsHashOfGetAll(jobSettings)
 
+                            assert(jobFingerprint==fingerprint)
+                            assert(jobHash==hash)
 
+                            select_check_exist_query="SELECT fingerprint, hash FROM sim_results WHERE fingerprint=" +jobFingerprint +" AND hash=" +str(jobHash)
+                            cursor.execute(select_check_exist_query)
+                            allreadyExist=cursor.fetchall()
+                            if not allreadyExist:    # list is empty
+                                uniqueJobsList.append(job)
+                                uniqueJobsCount+= 1
+                                #print("+", jobHash, " ", sep="", end="")
+                            else:
+                                #print("-", jobHash, " ", sep="", end="")
+                                pass
+                        print("Unique jobs", uniqueJobsCount, "out of", allJobsCount )
+                except mysql.connector.Error as e:
+                    print(e)
+
+                print()
+                print("saving unique jobs to", outputFilename)
+                with open(outputFilename, "w") as fp:
+                    json.dump(uniqueJobsList, fp)
+
+                
 
 def wrapperFunc(job):
     jobNumber=job[0]

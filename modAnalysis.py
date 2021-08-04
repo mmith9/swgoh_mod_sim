@@ -130,12 +130,12 @@ class ModAnalysis:
         for x in range(0,32):
             for value in values:
                 if value in ["high","mid","low"]:
-                    values[value]+=factors[value]*dist[x]*multiplier
+                    values[value]+=dist[x] *factors[value] *multiplier
                     factors[value]*=steps[value]
                 if value == "Elisa" and x>9:
-                    values["Elisa"]+=dist[x] * ((x-9)**3) * multiplier
+                    values["Elisa"]+=dist[x] * ((x-9)**3) *multiplier
                 if value == "ElisaM14" and x>14:
-                    values["ElisaM14"]+=dist[x] * ((x-14)**3) * multiplier
+                    values["ElisaM14"]+=dist[x] * ((x-14)**3) *multiplier
                 
         return values
 

@@ -1,3 +1,4 @@
+from json.encoder import py_encode_basestring_ascii
 from mod import Mod
 from copy import deepcopy
 import json
@@ -197,7 +198,7 @@ class SimSettings:
 
     def iterateSaveToFiles(self, iteratedList, outputPrefix, fileCut):
         if fileCut>0:
-            cutFileName="iteration_results/"+outputPrefix+str(self.fileCount)+".json"
+            cutFileName="iteration_results/"+outputPrefix +"x" +str(self.fileCount)+".json"
             self.fileCount+=1
         else:
            cutFileName="iteration_results/"+outputPrefix+".json"
@@ -224,7 +225,7 @@ class SimSettings:
 
                     
         for speedBumps in range(0,5) :
-            for grade in ["e", "d", "c", "b", "a"]:
+            for grade in Mod.allGrades:
                 for shape in shapesToCheck:                        
 
                     tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
@@ -237,39 +238,44 @@ class SimSettings:
                         print(self.minSpeedToSlice[speedBumps+1][grade][shape])
 
         for speedBumps in range(0,6) :
-            for grade in ["e", "d", "c", "b"]:
-                nextGrade=Mod.grades[Mod.grades.index(grade)+1]
-                for shape in shapesToCheck:                         
+            for grade in ["e", "d", "c", "b", "a", "6e", "6d", "6c", "6b"]:
+                if grade=="a":
+                    speedAdjust=1
+                else:
+                    speedAdjust=0
 
-                    tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
-                    tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
-                    sanity=sanity and tmpBool
-
-                    if (self.testlevel == 2) and not tmpBool:
-                        print(speedBumps, grade, nextGrade, shape)
-                        print(self.minSpeedToSlice[speedBumps][grade][shape])
-                        print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
-
-        #gap at 6 dot slice
-        for speedBumps in range(0,6) :
-            for shape in shapesToCheck:                        
-                tmpBool=(self.minSpeedToSlice[speedBumps]["a"][shape] == 100)
-                tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps]["a"][shape] < self.minSpeedToSlice[speedBumps]["6e"][shape])
-                sanity=sanity and tmpBool
-
-        for speedBumps in range(0,6) :
-            for grade in ["6e", "6d", "6c", "6b"]:
                 nextGrade=Mod.allGrades[Mod.allGrades.index(grade)+1]
                 for shape in shapesToCheck:                         
 
                     tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
-                    tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
+                    tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] + speedAdjust <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
                     sanity=sanity and tmpBool
 
                     if (self.testlevel == 2) and not tmpBool:
                         print(speedBumps, grade, nextGrade, shape)
                         print(self.minSpeedToSlice[speedBumps][grade][shape])
                         print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
+
+        # #gap at 6 dot slice
+        # for speedBumps in range(0,6) :
+        #     for shape in shapesToCheck:                        
+        #         tmpBool=(self.minSpeedToSlice[speedBumps]["a"][shape] == 100)
+        #         tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps]["a"][shape] < self.minSpeedToSlice[speedBumps]["6e"][shape])
+        #         sanity=sanity and tmpBool
+
+        # for speedBumps in range(0,6) :
+        #     for grade in ["6e", "6d", "6c", "6b"]:
+        #         nextGrade=Mod.allGrades[Mod.allGrades.index(grade)+1]
+        #         for shape in shapesToCheck:                         
+
+        #             tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+        #             tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
+        #             sanity=sanity and tmpBool
+
+        #             if (self.testlevel == 2) and not tmpBool:
+        #                 print(speedBumps, grade, nextGrade, shape)
+        #                 print(self.minSpeedToSlice[speedBumps][grade][shape])
+        #                 print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
 
         return sanity
 
@@ -317,9 +323,274 @@ class SimSettings:
         return fingerprint
 
     def settingsHash(self) -> int:
-        return SimSettings.settingsHashOfGetAll(self.getAll())
+        ### HOTFIX
+        return SimSettings.settingsHashOfGetAll(json.loads(json.dumps(self.getAll())))
     
     def settingsHashOfGetAll(settings) -> int:
         return binascii.crc32(bytes(json.dumps(settings), "utf-8"))
     
+    def iterateSettingsByListQuick(self, iterateList, listPosition=0, iteratedList=[], complexityList=[], countBranchOnly=0, benchmarkPercent=0, outputPrefix="none", fileCut=0, sanityConstraint=1):
+        if not complexityList:
+            self.calculateComplexity(iterateList, complexityList)
+            self.iterationBranchesTotal=complexityList[0]
+            self.iteratedBranches=0
+            self.generatedSettings=0
+            assert(listPosition==0)
 
+        if self.testlevel>10:
+            print("level:",listPosition, "complexity:",complexityList[listPosition], "branches:", self.iteratedBranches, "of", self.iterationBranchesTotal, 
+                "(", self.iteratedBranches/self.iterationBranchesTotal*100,"% )")
+
+            if listPosition<len(iterateList):
+                print(iterateList[listPosition])
+            
+            if self.testlevel>20:
+                input()
+ 
+        #iterate further down the list?
+        if listPosition < len(iterateList):
+            currentIteration=iterateList[listPosition]
+           
+            for x in currentIteration["range"]:
+                self.set(currentIteration["target"], x, grade=currentIteration["grade"], shape=currentIteration["shape"], speedBumps=currentIteration["speedBumps"])
+                if self.iterateCheckSanityPartialQuick(iterateList, listPosition):
+                    self.iterateSettingsByListQuick(iterateList, listPosition+1, iteratedList, complexityList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut, sanityConstraint)
+                else:
+                    if self.testlevel>9:
+                        print("partial sanity branch cut, list pos:", listPosition, "branches cut:", complexityList[listPosition+1])
+                    self.iteratedBranches+= complexityList[listPosition+1]
+
+        #nope all on list has been iterated 
+        else:
+            self.iterationCount+= 1
+            self.iteratedBranches+= 1
+
+            if (self.testlevel>0) and (self.iterationCount % 10000 == 0):
+                #print(".", end="")
+                pass
+
+            if (self.testlevel>0) and (self.iterationCount % 100 == 0):
+                print("branches:", self.iteratedBranches, "of", self.iterationBranchesTotal, 
+                "(", self.iteratedBranches/self.iterationBranchesTotal*100,"% )", "valid settings produced", self.generatedSettings )
+              
+            # Because allready checked by partial sanity, last step is not partial but full   
+            #assert(self.iterateCheckSanity() == True)
+            
+            if (sanityConstraint==1) and not self.iterateCheckSanity() :
+                pass
+
+            elif countBranchOnly>0 :
+                self.generatedSettings+=1
+
+                if self.testlevel>20:
+                    print(self.settingsFingerprint()," ", end="")
+                    print(self.settingsHash())
+                    print("fingerprint:",len(self.settingsFingerprint()), "settings:", len(json.dumps(self.getAll())))
+
+                if (self.testlevel>0) and (self.generatedSettings % 10000 == 0):
+                    #print("*", end="")
+                    pass
+
+            else:
+                self.generatedSettings+=1
+                if (self.testlevel>0) and (self.generatedSettings % 1000 == 0):
+                    #print("*", end="")
+                    pass
+                    
+                if benchmarkPercent>0:
+                    if (self.generatedSettings % (benchmarkPercent*100) == 0):
+                        self.iterateStep2(iteratedList, outputPrefix, fileCut)
+                else:
+                    self.iterateStep2(iteratedList, outputPrefix, fileCut)
+
+
+                if outputPrefix!="none" and fileCut>0:
+                    if (self.generatedSettings % fileCut) == 0:
+                        print("save")
+                        self.iterateSaveToFiles(iteratedList, outputPrefix, fileCut)
+            
+        #means original function call, and iterations done
+        if listPosition==0: 
+            if countBranchOnly>0:
+                return self.generatedSettings
+            elif outputPrefix!="none":
+                self.iterateSaveToFiles(iteratedList, outputPrefix, fileCut)
+                return outputPrefix
+            else:
+                return iteratedList
+
+    def calculateComplexity(self, iterateList, complexityList):
+        for baseLevel in range(0, len(iterateList)):
+            complexity=1
+            for level in range(baseLevel, len(iterateList)):
+                complexity*= len(iterateList[level]["range"])
+            complexityList.append(complexity)
+        complexityList.append(1)
+
+    def iterateCheckSanityPartial(self, iterateList, listPosition)-> bool:
+        assert(False)
+
+    #     #print("sanity check")
+    #     sanity=True
+    #     shapesToCheck=["square"]
+
+    #     # actually no sense, can set to 0 and let min inital speed for grey do the job
+    #     #
+    #     # first, minSpeedToSlice for grey >= minInitialSpeed for grey
+    #     #for shape in Mod.shapes:
+    #     #    sanity=sanity and (self.minSpeedToSlice[1]["e"][shape] >= self.minInitialSpeed["e"][shape])
+
+
+    #     #checking if minSpeedToSlice for speedBumps and grade satisfies <= for speedBumps+1 or grade+1, but ignore if 0 as those are not iterated and relevant
+    #     # 
+    #     #
+
+    #     ## first check increase in speedbumps            
+    #     for speedBumps in range(0,5) :
+    #         for grade in Mod.allGrades:
+    #             for shape in shapesToCheck:                        
+                    
+    #                 isFirstArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, grade, shape)
+    #                 isSecondArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps+1, grade, shape)
+
+    #                 if isFirstArgOnList and isSecondArgOnList:
+    #                     tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+    #                     tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps+1][grade][shape])
+    #                     sanity=sanity and tmpBool
+
+    #                     if (self.testlevel == 4) and not tmpBool:
+    #                         print(speedBumps, speedBumps+1, grade, shape, Mod.grades.index(grade))
+    #                         print(self.minSpeedToSlice[speedBumps][grade][shape])
+    #                         print(self.minSpeedToSlice[speedBumps+1][grade][shape])
+
+    #     ## second check increase in grade from "e" to "a"
+    #     for speedBumps in range(0,6) :
+    #         for grade in ["e", "d", "c", "b"]:
+    #             nextGrade=Mod.grades[Mod.grades.index(grade)+1]
+    #             for shape in shapesToCheck:                         
+
+    #                 isFirstArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, grade, shape)
+    #                 isSecondArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, nextGrade, shape)
+                    
+    #                 if isFirstArgOnList and isSecondArgOnList:
+    #                     tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+    #                     tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
+    #                     sanity=sanity and tmpBool
+
+    #                     if (self.testlevel == 2) and not tmpBool:
+    #                         print(speedBumps, grade, nextGrade, shape)
+    #                         print(self.minSpeedToSlice[speedBumps][grade][shape])
+    #                         print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
+
+    #     ## third check gap at "a" to "6e" slice , speed+1 !
+    #     #gap at 6 dot slice
+    #     for speedBumps in range(0,6) :
+    #         for shape in shapesToCheck:                    
+                
+    #             isFirstArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, "a", shape)
+    #             isSecondArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, "6e", shape)
+
+    #             if isFirstArgOnList and isSecondArgOnList:
+    #                 tmpBool=(self.minSpeedToSlice[speedBumps]["a"][shape] == 100)
+    #                 tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps]["a"][shape] < self.minSpeedToSlice[speedBumps]["6e"][shape])
+    #                 sanity=sanity and tmpBool
+
+    #     ## 4th, check grade increase from "6e" to "6a"
+    #     for speedBumps in range(0,6) :
+    #         for grade in ["6e", "6d", "6c", "6b"]:
+    #             nextGrade=Mod.allGrades[Mod.allGrades.index(grade)+1]
+    #             for shape in shapesToCheck:                         
+
+    #                 isFirstArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, grade, shape)
+    #                 isSecondArgOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumps, nextGrade, shape)
+
+    #                 if isFirstArgOnList and isSecondArgOnList:
+    #                     tmpBool=(self.minSpeedToSlice[speedBumps][grade][shape] == 100)
+    #                     tmpBool=tmpBool or (self.minSpeedToSlice[speedBumps][grade][shape] <= self.minSpeedToSlice[speedBumps][nextGrade][shape])
+    #                     sanity=sanity and tmpBool
+
+    #                     if (self.testlevel == 2) and not tmpBool:
+    #                         print(speedBumps, grade, nextGrade, shape)
+    #                         print(self.minSpeedToSlice[speedBumps][grade][shape])
+    #                         print(self.minSpeedToSlice[speedBumps][nextGrade][shape])
+
+    #     return sanity
+
+    def iterateCheckSanityPartialQuick(self, iterateList, listPosition) -> bool :
+
+        sanity=True
+        shapesToCheck=["square"]
+
+        currShape="square"  #shortcut
+        currGrade=iterateList[listPosition]["grade"]
+        currSpeedBumps=iterateList[listPosition]["speedBumps"]
+
+        if currGrade!="e":
+            gradeDown=Mod.allGrades[Mod.allGrades.index(currGrade)-1]
+            isGradeDownOnList=self.isSettingOnPartialList(iterateList, listPosition, currSpeedBumps, gradeDown, currShape)
+        else:
+            isGradeDownOnList=False
+        
+        if currGrade!="6a":
+            gradeUp=Mod.allGrades[Mod.allGrades.index(currGrade)+1]
+            isGradeUpOnList=self.isSettingOnPartialList(iterateList, listPosition, currSpeedBumps, gradeUp, currShape)
+        else:
+            isGradeUpOnList=False
+
+        if currSpeedBumps!=0:
+            speedBumpsDown=currSpeedBumps-1
+            isSpeedBumpsDownOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumpsDown, currGrade, currShape)
+        else:
+            isSpeedBumpsDownOnList=False
+
+        if currSpeedBumps!=5:
+            speedBumpsUp=currSpeedBumps+1
+            isSpeedBumpsUpOnList=self.isSettingOnPartialList(iterateList, listPosition, speedBumpsUp, currGrade, currShape)
+        else:
+            isSpeedBumpsUpOnList=False
+
+
+        if isSpeedBumpsDownOnList:
+            tmpBool=(self.minSpeedToSlice[speedBumpsDown][currGrade][currShape] == 100)
+            tmpBool=tmpBool or (self.minSpeedToSlice[speedBumpsDown][currGrade][currShape] <= self.minSpeedToSlice[currSpeedBumps][currGrade][currShape])
+            sanity=sanity and tmpBool
+
+        if isSpeedBumpsUpOnList:
+            tmpBool=(self.minSpeedToSlice[currSpeedBumps][currGrade][currShape] == 100)
+            tmpBool=tmpBool or (self.minSpeedToSlice[currSpeedBumps][currGrade][currShape] <= self.minSpeedToSlice[speedBumpsUp][currGrade][currShape])
+            sanity=sanity and tmpBool
+
+        if isGradeDownOnList:
+            if currGrade=="6e":
+                speedAdjust=1
+            else:
+                speedAdjust=0
+            tmpBool=(self.minSpeedToSlice[currSpeedBumps][gradeDown][currShape] == 100)
+            tmpBool=tmpBool or (self.minSpeedToSlice[currSpeedBumps][gradeDown][currShape] + speedAdjust <= self.minSpeedToSlice[currSpeedBumps][currGrade][currShape])
+            sanity=sanity and tmpBool
+
+        if isGradeUpOnList:
+            if currGrade=="a":
+                speedAdjust=1
+            else:
+                speedAdjust=0
+            tmpBool=(self.minSpeedToSlice[currSpeedBumps][currGrade][currShape] == 100)
+            tmpBool=tmpBool or (self.minSpeedToSlice[currSpeedBumps][currGrade][currShape] + speedAdjust <= self.minSpeedToSlice[currSpeedBumps][gradeUp][currShape])
+            sanity=sanity and tmpBool
+       
+        return sanity
+
+    def isSettingOnPartialList(self, iterateList, listPosition, speedBumps, grade, shape) -> bool:
+        isOnList=False
+        for x in range(0,listPosition+1):
+            tmpBool=True
+            tmpBool=tmpBool and (iterateList[x]["target"] == "minSpeedToSlice")
+            tmpBool=tmpBool and (iterateList[x]["speedBumps"] == speedBumps)
+            tmpBool=tmpBool and (iterateList[x]["grade"] == grade)
+            if iterateList[x]["shape"] != "any":
+                tmpBool=tmpBool and (iterateList[x]["shape"] == shape)
+            isOnList=isOnList or tmpBool
+            if isOnList:
+                break
+        return isOnList
+            

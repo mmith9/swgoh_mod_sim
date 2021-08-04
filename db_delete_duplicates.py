@@ -10,10 +10,11 @@ mysqlPassword=os.environ.get("mysql_password")
 
 test=processJobs.JobsProcessing()
 
-testHash=1242215931
+testHash=2064343007
 
 select_testHash_query="select fingerprint, hash from sim_results where hash=" + str(testHash)
 select_duplicates_query="select fingerprint, hash, count(fingerprint), count(hash) from sim_results GROUP BY hash HAVING count(fingerprint)>1 "
+
 delete_duplicates_query="DELETE t1 FROM sim_results t1 INNER JOIN sim_results t2 WHERE t1.id < t2.id AND t1.hash=t2.hash AND t1.fingerprint=t2.fingerprint"
 
 try:
@@ -23,11 +24,17 @@ try:
         password=mysqlPassword,
         database=mysqlDatabaseName,
     ) as connection:
-
         cursor=connection.cursor()
+
+        cursor.execute(select_testHash_query)
+        rows=cursor.fetchall()
+        print(rows)
+        print()
+        
 
         cursor.execute(select_duplicates_query)        
         duplicatedRows=cursor.fetchall()
+        print(duplicatedRows)
 
         for dupeRow in duplicatedRows:
             dupeFingerprint=dupeRow[0]
@@ -40,13 +47,7 @@ try:
             print(delete_dupes_query)
             cursor.execute(delete_dupes_query)
             connection.commit()
-            
-
-
-
-
-
-
+    
 except mysql.connector.Error as e:
     print(e)       
 
