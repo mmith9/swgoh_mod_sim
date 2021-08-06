@@ -42,8 +42,8 @@ while fileNum<maxFiles:
             jobScoreElisa=jobScores["speedValue"]["Elisa"]
             jobScoreElisaM14=jobScores["speedValue"]["ElisaM14"]
 
-            jobFingerprint=simSettings.SimSettings.settingsFingerprintOfGetAll(jobSettings)
-            jobHash=simSettings.SimSettings.settingsHashOfGetAll(jobSettings)
+            jobFingerprint=simSettings.SimSettings.settingsFingerprintOf(jobSettings)
+            jobHash=simSettings.SimSettings.settingsHashOf(jobSettings)
             listToInsert.append( (jobFingerprint, jobHash, jobScoreHigh, jobScoreMid, jobScoreLow, jobScoreElisa, jobScoreElisaM14, jobSettingsJson, jobScoresJson) )
         print("inserting", len(listToInsert), "values into table")
         try:

@@ -6,8 +6,8 @@ from datetime import datetime
 
 if __name__ == '__main__':
 
-    inFile="ITERUNIQ06x"
-    outFile="EVAL06x"
+    inFile="ITER06"
+    outFile="EVAL06"
     fileCut=5000
     fileCount=30
     
@@ -19,4 +19,5 @@ if __name__ == '__main__':
     print("processing done")
     end_time = datetime.now()
     print('Duration: {}'.format(end_time - start_time))
+    
     

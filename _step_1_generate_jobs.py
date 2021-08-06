@@ -1,33 +1,29 @@
 from simSettings import *
 from datetime import datetime
 
-test=SimSettings()
+simSettings=SimSettings()
 
-test.set("uncoverStatsLimit", 2, grade="e")
-test.set("minInitialSpeed", 5, grade="e")
-test.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
-
-#disable all slicing except explicitly permitted (a b c d e grades, not 6abcde)
-test.set("minSpeedToSlice", 100, grade="any", shape="any", speedBumps="any")
-
-test.set("minSpeedToSlice", 5 , grade="e", speedBumps=1)
-#test.set("minSpeedToSlice", 8 , grade="d", speedBumps=2)
+#disable all slicing except explicitly permitted 
+simSettings.set("minSpeedToSlice", 100, grade="any", shape="any", speedBumps="any")
 
 #best policy to date
-test.set("uncoverStatsLimit", 3, grade="e")
-test.set("minSpeedToSlice", 5 , grade="e", speedBumps=1)
+simSettings.set("uncoverStatsLimit", 3, grade="e")
+simSettings.set("minInitialSpeed", 5, grade="e")
+simSettings.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
 
-test.set("minSpeedToSlice", 9 , grade="d", speedBumps=2)
+simSettings.set("minSpeedToSlice", 5 , grade="e", speedBumps=1)
 
-test.set("minSpeedToSlice", 10 , grade="c", speedBumps=2)
-test.set("minSpeedToSlice", 13 , grade="c", speedBumps=3)
+simSettings.set("minSpeedToSlice", 9 , grade="d", speedBumps=2)
 
-test.set("minSpeedToSlice", 10 , grade="b", speedBumps=2)
-test.set("minSpeedToSlice", 14 , grade="b", speedBumps=3)
-test.set("minSpeedToSlice", 17 , grade="b", speedBumps=4)
+simSettings.set("minSpeedToSlice", 10 , grade="c", speedBumps=2)
+simSettings.set("minSpeedToSlice", 13 , grade="c", speedBumps=3)
 
-test.set("minSpeedToSlice", 14 , grade="a", speedBumps=3) 
-test.set("minSpeedToSlice", 17 , grade="a", speedBumps=4) 
+simSettings.set("minSpeedToSlice", 10 , grade="b", speedBumps=2)
+simSettings.set("minSpeedToSlice", 14 , grade="b", speedBumps=3)
+simSettings.set("minSpeedToSlice", 17 , grade="b", speedBumps=4)
+
+simSettings.set("minSpeedToSlice", 14 , grade="a", speedBumps=3) 
+simSettings.set("minSpeedToSlice", 17 , grade="a", speedBumps=4) 
 
 # uncover stats on grey 3
 # minInitialSpeed on grey 5
@@ -74,16 +70,19 @@ iterateList=[
     {"target":"minSpeedToSlice", "range":[15,16,17,18] , "shape":"any", "grade":"6b", "speedBumps":4}, 
 ]
 
+simSettings.general["creditsLimit"] = 11000000
+simSettings.general["shipCreditsLimit"] = 2500000
+
+
 start_time = datetime.now()
 
 iterateList.reverse()  # optimization for faster branch pruning
 
-output=test.iterateSettingsByListQuick(iterateList, outputPrefix="ITER07", fileCut=5000, sanityConstraint=1)
-#output=test.iterateSettingsByListQuick(iterateList, benchmarkPercent=1 , outputPrefix="ITER06x", fileCut=5000, sanityConstraint=1)
-#output=test.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1)
+output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER07", fileCut=5000, sanityConstraint=1, lightweight=1)
+#output=simSettings.iterateSettingsByListQuick(iterateList, benchmarkPercent=1 , outputPrefix="ITER06x", fileCut=5000, sanityConstraint=1)
+#output=simSettings.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1)
 
 end_time = datetime.now()
 
 print(output)
 
-print('Duration: {}'.format(end_time - start_time))

@@ -22,9 +22,15 @@ simSettings.set("minSpeedToSlice", 17 , grade="a")
 simSettings.set("minSpeedToSlice", 14 , grade="a", speedBumps=3) 
 simSettings.set("minSpeedToSlice", 17 , grade="a", speedBumps=4) 
 
+simSettings.general["creditsLimit"] = 11000000
+simSettings.general["shipCreditsLimit"] = 2500000
+
 evaluation=BudgetedEvaluation()
 
 score=evaluation.evaluateWithBudget(simSettings.getAll())
+
+
+
 
 print()
 for x in score:

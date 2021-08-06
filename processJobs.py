@@ -7,6 +7,8 @@ import os
 from datetime import datetime
 import psutil
 import mysql.connector
+from copy import deepcopy
+
 testlevel=10
 
 class JobsProcessing:
@@ -17,27 +19,36 @@ class JobsProcessing:
     def processFiles(self, inputPrefix="ITER", outputPrefix="EVAL", filesTotal=0, fileCut=1000, multiproc=False):
 
         for filenum in range(0, filesTotal):
-            start_time = datetime.now()
-            print("processing file:", filenum,"out of", filesTotal)
-            jobsFilename="iteration_results/"+inputPrefix+str(filenum)+".json"
-            outputFilename="iteration_results/"+outputPrefix+str(filenum)+".json"
+            jobsFilename="iteration_results/"+inputPrefix + "x" +str(filenum)+".json"
+            outputFilename="iteration_results/"+outputPrefix + "x" + str(filenum)+".json"
             
-            
-            if os.path.isfile(outputFilename):
-                pass
-            else:
-                with open(jobsFilename, "r") as fp:
-                    jobsList=json.load(fp)
-                    
-                results=self.processJobsList(jobsList, multiproc=multiproc)
-                with open(outputFilename, "w") as fp:
-                    json.dump(results, fp)
-            end_time = datetime.now()
-            print('Duration: {}'.format(end_time - start_time))
+            if os.path.isfile(jobsFilename):
+
+                start_time = datetime.now()
+                print("processing file:", filenum,"out of", filesTotal)
+                
+                
+                if os.path.isfile(outputFilename):
+                    print("or not, result file exists")
+                    pass
+                else:
+                    with open(jobsFilename, "r") as fp:
+                        jobsList=json.load(fp)
+                        
+                    results=self.processJobsList(jobsList, multiproc=multiproc)
+
+                    output={}
+                    output["header"] = jobsList["header"]
+                    output["results"] = results
+
+                    with open(outputFilename, "w") as fp:
+                        json.dump(output, fp)
+                end_time = datetime.now()
+                print('Duration: {}'.format(end_time - start_time))
 
     def processJobsList(self, jobsList, multiproc=False):
-
         if multiproc==False:
+            assert(False)
             results=[]
             for job in jobsList:
                 jobNumber=job[0]
@@ -50,7 +61,6 @@ class JobsProcessing:
 
             return results
         else:
-            #print(jobsList)
             results=self.processJobsListMulti(jobsList)
             return results
 
@@ -104,9 +114,18 @@ class JobsProcessing:
             self.results.sort(key=rtValueElisaM14, reverse=True)
                 
     def processJobsListMulti(self, jobsList):
-        pool=multiprocessing.Pool(4)
+        baseSettings=jobsList["header"]["settingsSnapshot"]
+        lightweightJobList=jobsList["jobList"]
+        jobList=[]
+
+        print("Recreating job list for multiprocessing pool")
+        for settingsChanges in lightweightJobList:
+            jobList.append( (baseSettings, settingsChanges) )
+        print("Recreated list")
+
+        pool=multiprocessing.Pool(multiprocessing.cpu_count())
         with pool:
-            results=pool.map(wrapperFunc, jobsList)
+            results=pool.map(wrapperFunc, jobList)
         return results
 
     def displayResultsRelevantSettings(self, linesMax=40):
@@ -363,19 +382,135 @@ class JobsProcessing:
                 with open(outputFilename, "w") as fp:
                     json.dump(uniqueJobsList, fp)
 
+    @staticmethod
+    def prepareResultListForDb(batchResults, trim=0) -> dict:
+        header=batchResults["header"]
+        results=batchResults["results"]
+        preparedResults=[]
+
+        ## [fingerprint, hash, high, mid, low, elisa, elisam14, energy, credits, microproc, avg energy, cap_amp, settings_diff, all_results]
+
+        for result in results:
+            scores=result["scores"]
+
+            preparedResult=[]
+            preparedResult.append(result["settingsFingerprint"])
+            preparedResult.append(result["settingsHash"])
+            
+            preparedResult.append(scores["speedValue"]["high"])
+            preparedResult.append(scores["speedValue"]["mid"])
+            preparedResult.append(scores["speedValue"]["low"])
+            preparedResult.append(scores["speedValue"]["Elisa"])
+            preparedResult.append(scores["speedValue"]["ElisaM14"])
+
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["modEnergy"])
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["credits"])
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["microprocessor"])
+
+            preparedResult.append(scores["budgetBreakdown"]["budgetRoll"]["modEnergy"])
+            preparedResult.append(scores["budgetBreakdown"]["capAmpBought"])
+
+            
+            if trim > 0:
+                for shape in ["squaresValue", "trianglesValue", "diamondsValue", "circlesValue", "crossesValue"]:
+                    del(scores[shape])
                 
+                del(scores["rltilt"])
+                del(scores["targetability"])
+                del(scores["budgetBreakdown"]["budgetRoll"])
+                del(scores["budgetBreakdown"]["budgetBuy"])
+                del(scores["budgetBreakdown"]["Rbought"])
+                del(scores["budgetBreakdown"]["Bbought"])
+                del(scores["budgetBreakdown"]["BSbought"])
+                del(scores["speedDistribution"])
+            
+            preparedResult.append(json.dumps(result["settings"]))
+            preparedResult.append(json.dumps(scores))
+
+            preparedResults.append(preparedResult)                                    
+        
+        return {"header": header, "resultListForDb": preparedResults}
+
 
 def wrapperFunc(job):
-    jobNumber=job[0]
-    jobSettings=job[1]
+    baseSettings=job[0]
+
+    jobNumber=job[1][0]
+    settingsChange=job[1][1]
+    settingsFingerprint=job[1][2]
+    settingsHash=job[1][3]
+
+    if testlevel > 99:
+        print(jobNumber)
+        print("base")
+        print(baseSettings)
+        print()
+        print("change")
+        print(settingsChange)
+        
+
+    jobSettings = deepcopy(baseSettings)
     
+    if testlevel > 99:
+        print("---------------------------")
+        print(jobNumber)
+        print("base")
+        print(baseSettings)
+        print()
+        print("change")
+        print(settingsChange)
+        print()
+        print("recreated")
+        print(jobSettings)
+        print()
+        print(SimSettings.settingsFingerprintOf(jobSettings))
+        print()
+        print(jobSettings["minSpeedToSlice"]["3"])
+        print()
+        with open("iteration_results/recreated"+str(jobNumber), "w") as fp:
+            json.dump(jobSettings, fp)
+        
+        print()
+
+    SimSettings.mergeSettings(jobSettings, settingsChange)
+
+    if testlevel > 99:
+        print("updated")
+        
+        with open("iteration_results/updated"+str(jobNumber), "w") as fp:
+            json.dump(jobSettings, fp)
+        
+        print(SimSettings.settingsFingerprintOf(jobSettings))
+        print(SimSettings.settingsHashOf(jobSettings))
+        print(settingsHash)
+        print()
+    
+    #    print(jobSettings)
+
+        print()
+        print(jobSettings["minSpeedToSlice"]["3"])
+        print()
+    
+
+    assert(SimSettings.settingsFingerprintOf(jobSettings) ==settingsFingerprint )
+    if testlevel > 99:
+        print("fingetprint ok")
+
+    assert(SimSettings.settingsHashOf(jobSettings) == settingsHash)
+    if testlevel > 99:
+        print("hash ok")
+
     if testlevel>0:
         print(jobNumber, end="|")
+
+    if testlevel > 99:
+        print("---------------------------")
+        assert(False)
 
     evaluation=BudgetedEvaluation()
     output=evaluation.evaluateWithBudget(jobSettings)
     
-    return {"job":jobNumber, "settings":jobSettings, "scores":output}
+    return {"job":jobNumber, "settings":settingsChange, "settingsHash": settingsHash, "settingsFingerprint":settingsFingerprint, "scores":output}
 
 def truncate(number, digits) -> float:
     stepper = 10.0 ** digits

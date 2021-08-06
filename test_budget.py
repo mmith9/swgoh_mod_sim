@@ -15,6 +15,7 @@ print (changes.getAll())
 
 
 
-print ("weekly credits", base.getCredits(), base.getAll()["shipCredits"])
-print ("daily credits", base.getCredits()/7, base.getAll()["shipCredits"]/7)
+print ("half weekly credits", base.getCredits() /2 , base.getAll()["shipCredits"]/2)
+
+#print ("daily credits", base.getCredits()/7, base.getAll()["shipCredits"]/7)
 
