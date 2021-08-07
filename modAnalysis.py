@@ -188,6 +188,12 @@ class ModAnalysis:
             for primary in primaries[shape]:
                 self.primaryPerShapeDistribution[shape][primary]+= analysisToAdd.primaryPerShapeDistribution[shape][primary] *multiplier
 
+    def addHeatVortex(self, levelProbability, mod, vortex):
+        for speed in range (0,32):
+            self.speedDistribution[speed]+= vortex["dist"][speed] * levelProbability
+        for change in vortex["costs"]:
+            self.budget.applyChange({change: vortex["costs"][change]* levelProbability })
+
 
 def returnValueHigh(analysis:ModAnalysis):
     return analysis.speedValue["high"]

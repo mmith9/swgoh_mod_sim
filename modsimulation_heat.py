@@ -1,13 +1,17 @@
 
+import json
 from modAnalysis import *
 from mod import Mod
+from heatMap import HeatMap
 
 class ModSimulation():
-    
+
+   
     def __init__(self):
         self.testlevel=1
         self.testPrintLevel=0
 
+        self.heat=HeatMap()
        
     def walkRolledMod(self,settings):
         # recursion/iteration start level           
@@ -45,7 +49,11 @@ class ModSimulation():
             print()
             print("total probability encountered", self.totalProbability)
             print("total recursion branches", self.branchCount)
-     
+            print("HEAT map size", len(json.dumps(self.heat.HEATmap)))
+
+        if self.testlevel >10 :
+            print(self.heat.HEATmap)
+
         return self.analysis
     
     def walkBoughtMod(self, levelProbability, mod:Mod, settings):
@@ -75,17 +83,22 @@ class ModSimulation():
         
     def energyChange(self, levelProbability, change):
         self.analysis.budget.applyChange({"modEnergy": levelProbability*change })
+        self.heat.analyzeBudgetChange(levelProbability, {"modEnergy": change})
 
     def creditChange(self, levelProbability, change):
         self.analysis.budget.applyChange({"credits": levelProbability*change})
+        self.heat.analyzeBudgetChange(levelProbability, {"credits": change})
 
     def budgetChange(self, levelProbability, changes):
         for change in changes:
             self.analysis.budget.applyChange({change: changes[change] * levelProbability })
+        self.heat.analyzeBudgetChange(levelProbability, changes)
 
     def budgetDeduct(self, levelProbability, changes):
         for change in changes:
             self.analysis.budget.applyChange({change: (-1) * changes[change] * levelProbability })
+        
+        self.heat.analyzeBudgetChange( -levelProbability, changes)
 
     def walkEND(self,probability):
         self.totalProbability+=probability
@@ -305,6 +318,23 @@ class ModSimulation():
         else:
             self.walkLevelUpTo12(levelProbability, newMod)
 
+    def heatLevelUpTo12(self, levelProbability, mod:Mod):
+   
+        if self.heat.isHeatApplicable(levelProbability, mod):
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
+            if vortex:
+                self.analysis.addHeatVortex(levelProbability, mod, vortex)
+                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.walkEND(levelProbability)
+                
+            else:
+                self.heat.addMarker(levelProbability, mod)
+                self.walkLevelUpTo12(levelProbability, mod)            
+                self.heat.stripMarker(levelProbability, mod)
+
+        else:   
+            self.walkLevelUpTo12(levelProbability, mod)            
+
     def walkLevelUpTo12(self,levelProbability, mod:Mod):
         newMod=self.copyMod(mod)
         if (newMod.level < 12):
@@ -365,7 +395,7 @@ class ModSimulation():
         isMinSpeedToSlice= (self.settings["minSpeedToSlice"][speedBumps][mod.grade][mod.shape] <= modSpeed)
         isMinSpeedToKeep= (self.settings["minSpeedToKeep"][speedBumps][mod.grade][mod.shape] <= modSpeed)
         isMaxGrade= (mod.grade=="a")
-        
+        isMaxLevel= (mod.level==15)
 
         shouldSlice=True
         shouldSlice=shouldSlice and not isMaxGrade
@@ -373,37 +403,59 @@ class ModSimulation():
         shouldSlice=shouldSlice and isMinSpeedToSlice
 
         if shouldSlice:
-            self.walkSliceUp(levelProbability, mod)
+            if isMaxLevel:
+                self.heatSliceUp(levelProbability, mod)
+            else:
+                self.walkLevelUpTo15Then(levelProbability, mod, self.heatSliceUp)
 
         elif isMaxGrade and self.settings["general"]["enable6DotSlicing"]==1 :
             self.walkSliceUp6DotStep1(levelProbability, mod)
-
+ 
         elif isMinSpeedToKeep:
             self.analysis.analyzeMod(levelProbability, mod)
+            self.heat.analyzeMod(levelProbability, mod)
             self.walkEND(levelProbability)   
 
         else:
             self.sellMod(levelProbability, mod)
             self.walkEND(levelProbability)
 
+    def heatSliceUp(self,levelProbability, mod:Mod):
+        if self.heat.isHeatApplicable(levelProbability, mod):
+
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
+
+            if self.testlevel>100:
+                print(levelProbability, mod,  vortex)
+                print(HeatMap.makeHeatMarker(levelProbability, mod))
+
+            if vortex:
+                self.analysis.addHeatVortex(levelProbability, mod, vortex)
+                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.walkEND(levelProbability)
+                
+            else:
+                self.heat.addMarker(levelProbability, mod)
+                if self.testlevel>100:
+                    print(self.heat.activeMarkers)
+               
+                self.walkSliceUp(levelProbability, mod)            
+                self.heat.stripMarker(levelProbability, mod)
+
+        else:   
+            self.walkSliceUp(levelProbability, mod)            
+
     def walkSliceUp(self,levelProbability, mod:Mod):
+        newMod=self.copyMod(mod)
+        assert(newMod.level==15)
+
         if self.testlevel>=107:
             if self.testPrintLevel==107:
                 self.printModChance(levelProbability, mod)
             self.walkEND(levelProbability)
 
-        newMod=self.copyMod(mod)
-
-        assert(newMod.level==12 or newMod.level==15)
-        if newMod.level==12:
-            cost=0
-            for x in range (0,3):
-                cost+=Mod.modLevelingCost[newMod.pips][newMod.level+x]
-            self.creditChange(levelProbability, -cost)
-            newMod.level+=3
-
-        assert(newMod.level==15)
         cost=Mod.modSlicingCost[newMod.grade]
+
         self.creditChange(levelProbability, -cost["credits"])
         #average 1.2material per 12 energy
         self.energyChange(levelProbability, -cost["mats"]*10)
@@ -451,17 +503,49 @@ class ModSimulation():
         shouldSlice=shouldSlice and not isMaxSpeedBumps
         shouldSlice=shouldSlice and (isSpeedBumpMissed or isMissAllowed)
         shouldSlice=shouldSlice and isMinSpeedToSlice
+        isMaxLevel= (mod.level==15)
 
         if shouldSlice:
-            self.walkSliceUp6Dot(levelProbability, mod)
+            if isMaxLevel:
+                self.heatSliceUp6Dot(levelProbability, mod)
+            else:
+                self.walkLevelUpTo15Then(levelProbability, mod, self.heatSliceUp6Dot)
 
         elif isMinSpeedToKeep:
             self.analysis.analyzeMod(levelProbability, mod)
+            self.heat.analyzeMod(levelProbability, mod)
             self.walkEND(levelProbability)   
             
         else:
             self.sellMod(levelProbability, mod)
             self.walkEND(levelProbability)
+
+    def heatSliceUp6Dot(self,levelProbability, mod:Mod):
+
+        if self.heat.isHeatApplicable(levelProbability, mod):
+
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
+            if self.testlevel>10:
+                print(" got vortex for" , HeatMap.makeHeatMarker(levelProbability, mod))
+                print("Vortex: ",vortex)
+                print("ACTIVE MARKERS", self.heat.activeMarkers)
+
+            if vortex:
+
+                self.analysis.addHeatVortex(levelProbability, mod, vortex)
+                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.walkEND(levelProbability)
+                
+            else:
+                self.heat.addMarker(levelProbability, mod)
+                if self.testlevel>10:
+                    print("ACTIVE MARKERS", self.heat.activeMarkers)
+               
+                self.walkSliceUp6Dot(levelProbability, mod) 
+                self.heat.stripMarker(levelProbability, mod)
+
+        else:   
+            self.walkSliceUp6Dot(levelProbability, mod)    
 
     def walkSliceUp6Dot(self,levelProbability, mod:Mod):
         newMod=self.copyMod(mod)
@@ -472,16 +556,10 @@ class ModSimulation():
                 self.printModChance(levelProbability, mod)
             self.walkEND(levelProbability)
 
-        assert(newMod.level==12 or newMod.level==15)
-        if newMod.level==12:
-            cost=0
-            for x in range (0,3):
-                cost+=Mod.modLevelingCost[newMod.pips][newMod.level+x]
-            self.creditChange(levelProbability, -cost)
-            newMod.level+=3
+        assert(newMod.level==15)
 
         cost=Mod.modSlicingCost[newMod.grade]
-        #self.budgetChange(levelProbability, cost)
+
         self.budgetDeduct(levelProbability, cost)
 
         if self.testlevel > 15:
@@ -659,3 +737,12 @@ class ModSimulation():
                             newMod.secondary["speed"][1]+=speed
                             recursionReturnFunction(levelProbability/4*Mod.increaseSpeedProbability[speed]/100, newMod)
 
+    def walkLevelUpTo15Then(self, levelProbability, mod:Mod, recursionReturnFunction):
+        newMod=self.copyMod(mod)
+        assert(newMod.level==12)
+        cost=0
+        for x in range (0,3):
+            cost+=Mod.modLevelingCost[newMod.pips][newMod.level+x]
+        self.creditChange(levelProbability, -cost)
+        newMod.level+=3
+        recursionReturnFunction(levelProbability, newMod)

@@ -1,12 +1,12 @@
 
-from modsimulation import ModSimulation
+import modsimulation
 from modAnalysis import *
 from copy import deepcopy
 from mod import *
 from simSettings import *
 
 baseSettings=SimSettings()
-base=ModSimulation()
+base=modsimulation.ModSimulation()
 
 # baseSettings.set("uncoverStatsLimit", 4, grade="e")
 # baseSettings.set("minSpeedToKeep", 0)
@@ -53,7 +53,7 @@ print()
 
 ########################
 compareSettings=SimSettings()
-compare=ModSimulation()
+compare=modsimulation.ModSimulation()
 
 compareSettings.set("uncoverStatsLimit", 0, grade="e")
 compareSettings.set("minInitialSpeed", 5, grade="e")
@@ -115,12 +115,10 @@ for x in range(0,32):
 
 print("base speed   ",baseOutput.speedValue)
 print("compare speed",compareOutput.speedValue)
-print("cmp/base     ",compareOutput.divideValues(compareOutput.speedValue,baseOutput.speedValue))
+#print("cmp/base     ",compareOutput.divideValues(compareOutput.speedValue,baseOutput.speedValue))
 print()
-print("base fertility   ",baseOutput.fertility)
-print("compare fertility",compareOutput.fertility)
-print("cmp/base         ",compareOutput.divideValues(compareOutput.fertility,baseOutput.fertility))
-print()
+
+
 print("base tilt   ",baseOutput.rltilt)
 print("compare tilt", compareOutput.rltilt)
 print("base tga    ", baseOutput.targetability)
