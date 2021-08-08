@@ -316,7 +316,7 @@ class ModSimulation():
                 self.analysis.analyzeMod(levelProbability, newMod)
                 self.walkEND(levelProbability)
         else:
-            self.walkLevelUpTo12(levelProbability, newMod)
+            self.heatLevelUpTo12(levelProbability, newMod)
 
     def heatLevelUpTo12(self, levelProbability, mod:Mod):
    

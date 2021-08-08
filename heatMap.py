@@ -142,14 +142,14 @@ class HeatMap:
 
     @staticmethod
     def isHeatApplicable(levelProbability, mod:Mod) -> bool:
-        # speedBumps=mod.secondary["speed"][0]
-        # speed=mod.secondary["speed"][1]
-        # isApplicable=True
-        # isApplicable=isApplicable and mod.level==15
-        # isApplicable=isApplicable and mod.grade in ["c","b","a","6e"]
-        # isApplicable=isApplicable and speedBumps in [3,4]
-        # isApplicable=isApplicable and speed in range(speedBumps*3 +2, speedBumps*6 -2)
-        return True
+        speedBumps=mod.secondary["speed"][0]
+        speed=mod.secondary["speed"][1]
+        isApplicable=True
+        isApplicable=isApplicable and mod.level >= 12
+        isApplicable=isApplicable and mod.grade in [ "d", "c","b","a", "6e", "6d", "6c"]
+        #isApplicable=isApplicable and speedBumps in [3,4]
+        #isApplicable=isApplicable and speed in range(speedBumps*3 , speedBumps*6 -1)
+        return isApplicable
 
     @staticmethod
     def makeHeatMarker(levelProbability, mod:Mod) -> dict:
