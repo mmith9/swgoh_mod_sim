@@ -4,8 +4,8 @@ import processJobs
 import simSettings
 import json
 
-inputPrefix="EVAL06"
-maxFiles=30
+inputPrefix="HEAT08"
+maxFiles=300
 fileNum=0
 
 

@@ -1,5 +1,5 @@
 
-from pandas_ods_reader import read_ods
+#from pandas_ods_reader import read_ods
 
 from mod import Mod
 

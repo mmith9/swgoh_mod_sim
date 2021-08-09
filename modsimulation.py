@@ -5,7 +5,7 @@ from mod import Mod
 class ModSimulation():
     
     def __init__(self):
-        self.testlevel=1
+        self.testlevel=0
         self.testPrintLevel=0
 
        

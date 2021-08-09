@@ -11,7 +11,7 @@ simSettings.set("uncoverStatsLimit", 3, grade="e")
 simSettings.set("minInitialSpeed", 5, grade="e")
 simSettings.set("minSpeedToKeep", 10, grade=["e","d","c","b"])
 
-simSettings.set("minSpeedToSlice", 5 , grade="e", speedBumps=1)
+simSettings.set("minSpeedToSlice", 0 , grade="e", speedBumps=1)  #min initial speed handles this
 
 simSettings.set("minSpeedToSlice", 9 , grade="d", speedBumps=2)
 
@@ -42,43 +42,55 @@ simSettings.set("minSpeedToSlice", 17 , grade="a", speedBumps=4)
 
 ######## end of policy
 
+
 iterateList=[
-    {"target":"uncoverStatsLimit", "range":[2,3] , "shape":"any", "grade":"e", "speedBumps":0},  
-#   {"target":"minInitialSpeed", "range":[3,4,5] , "shape":"any", "grade":"e", "speedBumps":0},  # 5 is always the best
+    {"target":"uncoverStatsLimit", "range":[0,1,2,3,4] , "shape":"any", "grade":"e", "speedBumps":0},  
+    {"target":"minInitialSpeed", "range":[3,4,5] , "shape":"any", "grade":"e", "speedBumps":0},  # 5 is always the best
     
-    {"target":"minSpeedToSlice", "range":[7,8,9] , "shape":"any", "grade":"d", "speedBumps":2},
+    {"target":"minSpeedToSlice", "range":[3,4,5,6] , "shape":"any", "grade":"d", "speedBumps":1},
+    {"target":"minSpeedToSlice", "range":[6,7,8,9,10,11,12] , "shape":"any", "grade":"d", "speedBumps":2},
 
-    {"target":"minSpeedToSlice", "range":[7,8,9,10] , "shape":"any", "grade":"c", "speedBumps":2},
-    {"target":"minSpeedToSlice", "range":[11,12,13,14] , "shape":"any", "grade":"c", "speedBumps":3},
-       
-    {"target":"minSpeedToSlice", "range":[7,8,9,10] , "shape":"any", "grade":"b", "speedBumps":2}, 
-    {"target":"minSpeedToSlice", "range":[11,12,13,14] , "shape":"any", "grade":"b", "speedBumps":3}, 
-    {"target":"minSpeedToSlice", "range":[14,15,16,17] , "shape":"any", "grade":"b", "speedBumps":4}, #never shows 18
+    {"target":"minSpeedToSlice", "range":[3,4,5,6], "shape":"any", "grade":"c", "speedBumps":1},
+    {"target":"minSpeedToSlice", "range":[6,7,8,9,10,11,12], "shape":"any", "grade":"c", "speedBumps":2},
+    {"target":"minSpeedToSlice", "range":[13] , "shape":"any", "grade":"c", "speedBumps":3},
 
-#   {"target":"minSpeedToSlice", "range":[7,8,9,10,11,12] , "shape":"any", "grade":"a", "speedBumps":2},  # no use, always pops 12 in top 100 scores
-    {"target":"minSpeedToSlice", "range":[11,12,13,14] , "shape":"any", "grade":"a", "speedBumps":3},
-    {"target":"minSpeedToSlice", "range":[14,15,16,17] , "shape":"any", "grade":"a", "speedBumps":4},   #never shows 18
+    {"target":"minSpeedToSlice", "range":[3,4,5,6], "shape":"any", "grade":"b", "speedBumps":1},    
+    {"target":"minSpeedToSlice", "range":[6,7,8,9,10,11,12], "shape":"any", "grade":"b", "speedBumps":2}, 
+    {"target":"minSpeedToSlice", "range":[14], "shape":"any", "grade":"b", "speedBumps":3}, 
+    {"target":"minSpeedToSlice", "range":[17] , "shape":"any", "grade":"b", "speedBumps":4}, #never shows 18
 
-    {"target":"minSpeedToSlice", "range":[13,14,15,16] , "shape":"any", "grade":"6e", "speedBumps":3}, 
-    {"target":"minSpeedToSlice", "range":[13,14,15,16] , "shape":"any", "grade":"6d", "speedBumps":3}, 
-    {"target":"minSpeedToSlice", "range":[13,14,15,16] , "shape":"any", "grade":"6c", "speedBumps":3}, 
-    {"target":"minSpeedToSlice", "range":[14,15,16,17] , "shape":"any", "grade":"6b", "speedBumps":3}, 
+    {"target":"minSpeedToSlice", "range":[3,4,5,6] , "shape":"any", "grade":"a", "speedBumps":1},  
+    {"target":"minSpeedToSlice", "range":[6,7,8,9,10,11,12] , "shape":"any", "grade":"a", "speedBumps":2},  # no use, always pops 12 in top 100 scores
+    {"target":"minSpeedToSlice", "range":[14], "shape":"any", "grade":"a", "speedBumps":3},
+    {"target":"minSpeedToSlice", "range":[17] , "shape":"any", "grade":"a", "speedBumps":4},   #never shows 18
 
-    {"target":"minSpeedToSlice", "range":[15,16,17,18] , "shape":"any", "grade":"6e", "speedBumps":4}, 
-    {"target":"minSpeedToSlice", "range":[15,16,17,18] , "shape":"any", "grade":"6d", "speedBumps":4}, 
-    {"target":"minSpeedToSlice", "range":[15,16,17,18] , "shape":"any", "grade":"6c", "speedBumps":4}, 
-    {"target":"minSpeedToSlice", "range":[15,16,17,18] , "shape":"any", "grade":"6b", "speedBumps":4}, 
+    {"target":"minSpeedToSlice", "range":[7,8,9,10,11,12,13] , "shape":"any", "grade":"6e", "speedBumps":2}, 
+    {"target":"minSpeedToSlice", "range":[7,8,9,10,11,12,13] , "shape":"any", "grade":"6d", "speedBumps":2}, 
+    {"target":"minSpeedToSlice", "range":[7,8,9,10,11,12,13] , "shape":"any", "grade":"6c", "speedBumps":2}, 
+    {"target":"minSpeedToSlice", "range":[7,8,9,10,11,12,13] , "shape":"any", "grade":"6b", "speedBumps":2}, 
+
+    {"target":"minSpeedToSlice", "range":[15] , "shape":"any", "grade":"6e", "speedBumps":3}, 
+    {"target":"minSpeedToSlice", "range":[15] , "shape":"any", "grade":"6d", "speedBumps":3}, 
+    {"target":"minSpeedToSlice", "range":[15] , "shape":"any", "grade":"6c", "speedBumps":3}, 
+    {"target":"minSpeedToSlice", "range":[17] , "shape":"any", "grade":"6b", "speedBumps":3}, 
+
+    {"target":"minSpeedToSlice", "range":[18] , "shape":"any", "grade":"6e", "speedBumps":4}, 
+    {"target":"minSpeedToSlice", "range":[18] , "shape":"any", "grade":"6d", "speedBumps":4}, 
+    {"target":"minSpeedToSlice", "range":[18] , "shape":"any", "grade":"6c", "speedBumps":4}, 
+    {"target":"minSpeedToSlice", "range":[18] , "shape":"any", "grade":"6b", "speedBumps":4}, 
 ]
+
 
 simSettings.general["creditsLimit"] = 11000000
 simSettings.general["shipCreditsLimit"] = 2500000
+simSettings.general["iterateList"]=iterateList
 
 
 start_time = datetime.now()
 
 iterateList.reverse()  # optimization for faster branch pruning
 
-output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER07", fileCut=5000, sanityConstraint=1, lightweight=1)
+output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER08", fileCut=100000, sanityConstraint=1, lightweight=1)
 #output=simSettings.iterateSettingsByListQuick(iterateList, benchmarkPercent=1 , outputPrefix="ITER06x", fileCut=5000, sanityConstraint=1)
 #output=simSettings.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1)
 

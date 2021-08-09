@@ -24,6 +24,7 @@ class SimSettings:
             ,"modSet":"offense"
             ,"quickPrimaryForking":1, "quickSecondaryForking":1, "quickSpeedForking":1
             ,"quickSDCForking":1, "quickSDCandCForking":1, "quickSDCCTForking":1
+            ,"iterateList":{}
             }
 
         self.modStore={

@@ -1,7 +1,7 @@
 import mysql.connector
 import os
 import json
-
+import time
 
 class DbOperations():
     def __init__(self) -> None:
@@ -17,6 +17,8 @@ class DbOperations():
         self.cursor :mysql.connector.connection.MySQLCursor
         self.dbConnection :mysql.connector.CMySQLConnection
     
+        self.tempTables=[]
+
     def connect(self):
         try:
             connection=mysql.connector.connect(host= self.mysqlServer, user=self.mysqlUser, password=self.mysqlPassword, database=self.mysqlDatabaseName)
@@ -24,7 +26,8 @@ class DbOperations():
 
         except mysql.connector.Error as e:
             print(e)
-        
+            input()
+            
         self.dbConnection= connection
         self.cursor=cursor
         return cursor
@@ -57,6 +60,40 @@ class DbOperations():
                 """
             self.cursor.execute(query)
 
+    def createTempTable(self, tableName):
+        if not self.dbConnection.is_connected():
+            self.connect()
+        
+        query = "CREATE TEMPORARY TABLE " + tableName + "("
+        query+= """
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                settings_fingerprint CHAR(100),
+                settings_hash BIGINT,
+                score_high DOUBLE,
+                score_mid DOUBLE,
+                score_low DOUBLE,
+                score_Elisa DOUBLE,
+                score_ElisaM14 DOUBLE,
+                leftover_mod_energy DOUBLE,
+                leftover_credits DOUBLE,
+                leftover_microprocessor DOUBLE,
+                roll_avg_energy_cost DOUBLE,
+                total_cap_amp_bought DOUBLE,
+                settings_iterated_diff TEXT,
+                all_results TEXT,
+                INDEX idx_fingerprint (settings_fingerprint),
+                INDEX idx_hash (settings_hash),
+                INDEX idx_score_high (score_high),
+                INDEX idx_score_mid (score_mid),
+                INDEX idx_score_low (score_low),
+                INDEX idx_score_Elisa (score_Elisa),
+                INDEX idx_score_ElisaM14 (score_ElisaM14)
+                )
+                """
+
+        self.cursor.execute(query)
+        return tableName
+
     def getTableNameForSim(self, baseFingerprint, baseHash, iterateList, baseSettings):
         if not self.dbConnection.is_connected():
             self.connect()
@@ -73,8 +110,9 @@ class DbOperations():
             return rows[0][0]
         else:
             # have to create table and insert it into list
+            
             tableName="sim_results_for_" +str(baseHash)
-
+        
             query="SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '" +tableName+ "'"
             self.cursor.execute(query)
             rows=self.cursor.fetchall()
@@ -105,7 +143,8 @@ class DbOperations():
                     INDEX idx_score_mid (score_mid),
                     INDEX idx_score_low (score_low),
                     INDEX idx_score_Elisa (score_Elisa),
-                    INDEX idx_score_ElisaM14 (score_ElisaM14)
+                    INDEX idx_score_ElisaM14 (score_ElisaM14),
+                    UNIQUE KEY (settings_fingerprint, settings_hash)
                     )
             """
             if self.testlevel>99:
@@ -174,3 +213,125 @@ class DbOperations():
                 self.cursor.execute(insert_sim_query, sim)
                 self.dbConnection.commit()
             
+    def feedInBulkBatchToDB(self, batchJob):
+        header=batchJob["header"]
+        simListForDb=batchJob["resultListForDb"]
+
+        baseSettings=header["settingsSnapshot"]
+        baseHash=header["snapshotHash"]
+        baseFingerprint=header["snapshotFingerprint"]
+        iterateList=header["iterateList"]
+
+        tableName=self.getTableNameForSim(baseFingerprint, baseHash, iterateList, baseSettings)
+
+        ## prepared by processJobs
+        ## [fingerprint, hash, high, mid, low, elisa, elisam14, energy, credits, microproc, avg energy, cap_amp, settings_diff, all_results]
+
+        insert_sim_query="INSERT IGNORE INTO " +tableName +" ("
+        insert_sim_query+= """
+            settings_fingerprint,
+            settings_hash,
+            score_high ,
+            score_mid ,
+            score_low ,
+            score_Elisa,
+            score_ElisaM14,
+            leftover_mod_energy,
+            leftover_credits,
+            leftover_microprocessor,
+            roll_avg_energy_cost,
+            total_cap_amp_bought, 
+            settings_iterated_diff,
+            all_results )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+            """
+        if self.testlevel>99:
+            print(insert_sim_query)
+
+        rowsToInsert=len(simListForDb)
+        packetNum=0
+        rowsPerPacket=2000
+        
+        start_time = time.time()
+        print("inserting ", rowsToInsert, "rows")
+        while packetNum*rowsPerPacket <= rowsToInsert:
+            self.cursor.executemany(insert_sim_query, simListForDb[packetNum*rowsPerPacket:(packetNum+1)*rowsPerPacket])
+            self.dbConnection.commit()
+            packetNum+=1 
+            print(".", end="")
+        print()
+        print(time.time() - start_time, "seconds")
+
+        query="SELECT COUNT(*) FROM "+tableName
+        self.cursor.execute(query)
+        row=self.cursor.fetchone()
+        self.cursor.fetchall()
+        print(tableName," rows total", row[0])
+
+        return tableName
+    
+    
+    
+    def feedInBulkBatchToDB__(self, batchJob):
+        header=batchJob["header"]
+        simListForDb=batchJob["resultListForDb"]
+
+        baseSettings=header["settingsSnapshot"]
+        baseHash=header["snapshotHash"]
+        baseFingerprint=header["snapshotFingerprint"]
+        iterateList=header["iterateList"]
+        
+        tableName="temp_"+str(baseHash)
+        if tableName not in self.tempTables:
+            self.createTempTable(tableName)
+            self.tempTables.append(tableName)
+
+        ## prepared by processJobs
+        ## [fingerprint, hash, high, mid, low, elisa, elisam14, energy, credits, microproc, avg energy, cap_amp, settings_diff, all_results]
+
+        insert_sim_query="INSERT INTO " +tableName +" ("
+        insert_sim_query+= """
+            settings_fingerprint,
+            settings_hash,
+            score_high ,
+            score_mid ,
+            score_low ,
+            score_Elisa,
+            score_ElisaM14,
+            leftover_mod_energy,
+            leftover_credits,
+            leftover_microprocessor,
+            roll_avg_energy_cost,
+            total_cap_amp_bought, 
+            settings_iterated_diff,
+            all_results )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+            """
+        if self.testlevel>99:
+            print(insert_sim_query)
+
+        rowsToInsert=len(simListForDb)
+        packetNum=0
+        rowsPerPacket=2000
+        
+        start_time = time.process_time()
+        print("inserting ", rowsToInsert, "rows")
+        while packetNum*rowsPerPacket <= rowsToInsert:
+            self.cursor.executemany(insert_sim_query, simListForDb[packetNum*rowsPerPacket:(packetNum+1)*rowsPerPacket])
+            self.dbConnection.commit()
+            packetNum+=1 
+            print(".", end="")
+        print()
+        print(time.process_time() - start_time, "seconds")
+
+        query="SELECT COUNT(*) FROM "+tableName
+        self.cursor.execute(query)
+        row=self.cursor.fetchone()
+        self.cursor.fetchall()
+        print("temp rows total", row[0])
+
+        return tableName
+
+
+
+        
