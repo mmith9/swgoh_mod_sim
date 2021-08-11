@@ -1,5 +1,5 @@
 from modsimulation_heat import ModSimulation
-from modAnalysis import *
+from modAnalysis_heat import *
 
 from mod import *
 from simSettings import *
@@ -9,9 +9,9 @@ from copy import deepcopy
 ## simulate weekly budget
 class BudgetedEvaluation:
    
-    def __init__(self):
+    def __init__(self, heat={"mode":"singleSim", "iterateList":False}):
         self.testlevel=0
-        self.modSimulation=ModSimulation()
+        self.modSimulation=ModSimulation(heat)
         pass
 
     def evaluateWithBudget(self, settings):
@@ -220,7 +220,9 @@ class BudgetedEvaluation:
                 print("capacitor or amplifier bought", capacitorAmplifierConverted)
             if self.testlevel>20:
                 input("Press Enter to continue...")
+            
             maxTries-= 1
+            #endTries=maxTries
 
             if initialBudget.getModEnergy() < 1 :
                 maxTries= -1
@@ -232,7 +234,7 @@ class BudgetedEvaluation:
             print("Roll", wannaRoll*Rbought)
             print("Buy", wannaBuy*Bbought, "plus ship", wannaBuyShip)
 
- 
+        #print(endTries)
         finalAnalysis.addAnalysis(rolledModAnalysis, wannaRoll*Rbought )
         finalAnalysis.addAnalysis(boughtModAnalysis, wannaBuy*Bbought )
         finalAnalysis.calcScores()

@@ -1,8 +1,7 @@
 import json
 import multiprocessing
 import math
-
-import budgeted_evaluation
+from mod import Mod
 import budgeted_evaluation_heat
 import os
 from datetime import datetime
@@ -60,15 +59,16 @@ class JobsProcessing:
             pool.join()
             
             
-
-
     def processJobsList(self, jobsList):
 
-        budgetedEvaluation=budgeted_evaluation_heat.BudgetedEvaluation()
+        
 
         baseSettings=jobsList["header"]["settingsSnapshot"]
+        iterateList=jobsList["header"]["iterateList"]
         lightweightJobList=jobsList["jobList"]
         jobList=[]
+
+        budgetedEvaluation=budgeted_evaluation_heat.BudgetedEvaluation(heat={"mode":"multiSim", "iterateList":iterateList})
 
         print("Recreating job list from lightweight form")
         for settingsChanges in lightweightJobList:
@@ -155,10 +155,13 @@ class JobsProcessing:
                     print("---------------------------")
                     assert(False)
 
+            jobSettings["noHash"]={}
+            jobSettings["noHash"]["iterateList"] = iterateList
+
             output=budgetedEvaluation.evaluateWithBudget(jobSettings)
 
             results.append({"job":jobNumber, "settings":settingsChange, "settingsHash": settingsHash, "settingsFingerprint":settingsFingerprint, "scores":output })
-            
+                            
         return results
 
     def readResults(self, inputPrefix="FILTER", filesTotal=0):
@@ -225,9 +228,9 @@ class JobsProcessing:
             results=pool.map(wrapperFunc, jobList)
         return results
 
-    def displayResultsRelevantSettings(self, linesMax=40):
+    def displayResultsRelevantSettings(self, jobList, linesMax=40):
         for jobIndex in range (linesMax):
-            job = self.results[jobIndex]
+            job = jobList[jobIndex]
             
             jobNum=job["job"]
             jobSettings=job["settings"]
@@ -246,7 +249,14 @@ class JobsProcessing:
 
             print("uncover stats on grey:", jobSettings["uncoverStatsLimit"]["e"]["square"], end="")
             print(" |minInitialSpeed on grey:", jobSettings["minInitialSpeed"]["e"]["square"], end="")
-            print(" |avg roll energy cost:",jobScores["budgetBreakdown"]["avgRollModEnergyCost"])
+
+            if "avgRollModEnergyCost" in jobScores["budgetBreakdown"].keys() :
+                print(" |avg roll energy cost:",jobScores["budgetBreakdown"]["avgRollModEnergyCost"])
+            elif "budgetRoll" in jobScores["budgetBreakdown"].keys():
+                print(" |avg roll energy cost:",jobScores["budgetBreakdown"]["budgetRoll"]["modEnergy"])
+            else:
+                print()
+            
             #FILTERED print("minSpeedToKeep", jobSettings["minSpeedToKeep"]["1"]["e"]["square"])
             print("minSpeedToSlice:")
 
@@ -373,7 +383,7 @@ class JobsProcessing:
 
         return filteredJob
 
-    def loadTopResultsFromDb(self, maxTopResults=100):
+    def loadTopResultsFromDb(self, hash,  maxTopResults=100):
 
         mysqlDatabaseName="swgoh_sim_results"
         mysqlUser=os.environ.get("mysql_user")
@@ -388,8 +398,13 @@ class JobsProcessing:
                 ) as connection:
                 cursor=connection.cursor()
 
+                query="select base_fingerprint, base_hash, iterate_list, base_settings, sims_table_name FROM swgoh_sims WHERE base_hash='" +str(hash) +"'"
+                cursor.execute(query)
+
+
+
                 for valueFunc in ["high", "mid", "low", "Elisa", "ElisaM14"]:
-                    select_top_scores_query="SELECT fingerprint, hash, settings, scores, score_"+valueFunc+" FROM sim_results ORDER BY score_"+valueFunc+" DESC LIMIT "+str(maxTopResults)
+                    select_top_scores_query="SELECT settings_fingerprint, settings_hash, settings, scores, score_"+valueFunc+" FROM sim_results_for_"+str(hash)+" ORDER BY score_"+valueFunc+" DESC LIMIT "+str(maxTopResults)
                     if testlevel>1 :
                         print(select_top_scores_query)
                     cursor.execute(select_top_scores_query)

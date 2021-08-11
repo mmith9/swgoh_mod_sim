@@ -1,17 +1,17 @@
 
 import json
-from modAnalysis import *
+from modAnalysis_heat import *
 from mod import Mod
 from heatMap import HeatMap
 
 class ModSimulation():
 
    
-    def __init__(self):
+    def __init__(self,heat={"mode":"singleSim", "iterateList":False}):
         self.testlevel=0
         self.testPrintLevel=0
 
-        self.heat=HeatMap()
+        self.heat=HeatMap(heat)
        
     def walkRolledMod(self,settings):
         # recursion/iteration start level           
@@ -39,10 +39,12 @@ class ModSimulation():
         newMod.secondary={}
         self.modSet=settings["general"]["modSet"]
 
+
         # self.quickPrimaryForking=1
         # self.quickSecondaryForking=1
         # self.quickSpeedForking=1
 
+        self.heat.supplySettings(self.settings)
         self.walkPips(levelProbability,newMod)
         
         if self.testlevel>0:
@@ -77,6 +79,7 @@ class ModSimulation():
         self.quickSecondaryForking=self.settings["general"]["quickSecondaryForking"]
         self.quickSpeedForking=self.settings["general"]["quickSpeedForking"]
 
+        self.heat.supplySettings(self.settings)
         self.walkSecondaryStep1(levelProbability, mod)
 
         return self.analysis
@@ -321,16 +324,16 @@ class ModSimulation():
     def heatLevelUpTo12(self, levelProbability, mod:Mod):
    
         if self.heat.isHeatApplicable(levelProbability, mod):
-            vortex=self.heat.getSubAnalysisFor(levelProbability, mod, self.settings)
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
             if vortex:
                 self.analysis.addHeatVortex(levelProbability, mod, vortex)
-                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.heat.addHeatVortexToLastActiveMarker(levelProbability, vortex)
                 self.walkEND(levelProbability)
                 
             else:
-                self.heat.addMarker(levelProbability, mod, self.settings)
+                self.heat.addMarker(levelProbability, mod)
                 self.walkLevelUpTo12(levelProbability, mod)            
-                self.heat.stripMarker(levelProbability, mod, self.settings)
+                self.heat.stripMarker(levelProbability, mod)
 
         else:   
             self.walkLevelUpTo12(levelProbability, mod)            
@@ -351,9 +354,9 @@ class ModSimulation():
                 newMod.level+=3
 
             if newMod.getSecondaryStatCount() < 4:
-                self.walkAddNewSecondaryStat(levelProbability, newMod, self.walkLevelUpTo12)
+                self.walkAddNewSecondaryStat(levelProbability, newMod, self.heatLevelUpTo12)
             else: 
-                self.walkIncreaseExistingStat(levelProbability, newMod, self.walkLevelUpTo12)
+                self.walkIncreaseExistingStat(levelProbability, newMod, self.heatLevelUpTo12)
 
         else:
             assert(newMod.level==12)
@@ -423,24 +426,24 @@ class ModSimulation():
     def heatSliceUp(self,levelProbability, mod:Mod):
         if self.heat.isHeatApplicable(levelProbability, mod):
 
-            vortex=self.heat.getSubAnalysisFor(levelProbability, mod, self.settings)
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
 
             if self.testlevel>100:
                 print(levelProbability, mod,  vortex)
-                print(HeatMap.makeHeatMarker(levelProbability, mod, self.settings))
+                print(HeatMap.makeHeatMarker(levelProbability, mod))
 
             if vortex:
                 self.analysis.addHeatVortex(levelProbability, mod, vortex)
-                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.heat.addHeatVortexToLastActiveMarker(levelProbability, vortex)
                 self.walkEND(levelProbability)
                 
             else:
-                self.heat.addMarker(levelProbability, mod, self.settings)
+                self.heat.addMarker(levelProbability, mod)
                 if self.testlevel>100:
                     print(self.heat.activeMarkers)
                
                 self.walkSliceUp(levelProbability, mod)            
-                self.heat.stripMarker(levelProbability, mod, self.settings)
+                self.heat.stripMarker(levelProbability, mod)
 
         else:   
             self.walkSliceUp(levelProbability, mod)            
@@ -524,25 +527,25 @@ class ModSimulation():
 
         if self.heat.isHeatApplicable(levelProbability, mod):
 
-            vortex=self.heat.getSubAnalysisFor(levelProbability, mod, self.settings)
+            vortex=self.heat.getSubAnalysisFor(levelProbability, mod)
             if self.testlevel>10:
-                print(" got vortex for" , self.heat.makeHeatMarker(levelProbability, mod, self.settings))
+                print(" got vortex for" , self.heat.makeHeatMarker(levelProbability, mod))
                 print("Vortex: ",vortex)
                 print("ACTIVE MARKERS", self.heat.activeMarkers)
-
+                input()
             if vortex:
 
                 self.analysis.addHeatVortex(levelProbability, mod, vortex)
-                self.heat.addHeatVortexToActiveMarkers(levelProbability, vortex)
+                self.heat.addHeatVortexToLastActiveMarker(levelProbability, vortex)
                 self.walkEND(levelProbability)
                 
             else:
-                self.heat.addMarker(levelProbability, mod, self.settings)
+                self.heat.addMarker(levelProbability, mod)
                 if self.testlevel>10:
                     print("ACTIVE MARKERS", self.heat.activeMarkers)
                
                 self.walkSliceUp6Dot(levelProbability, mod) 
-                self.heat.stripMarker(levelProbability, mod, self.settings)
+                self.heat.stripMarker(levelProbability, mod)
 
         else:   
             self.walkSliceUp6Dot(levelProbability, mod)    

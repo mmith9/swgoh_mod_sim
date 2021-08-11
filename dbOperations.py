@@ -2,6 +2,8 @@ import mysql.connector
 import os
 import json
 import time
+import simSettings
+from copy import deepcopy
 
 class DbOperations():
     def __init__(self) -> None:
@@ -333,5 +335,46 @@ class DbOperations():
         return tableName
 
 
+    def loadTopResultsFromDb(self, hash,  maxTopResults=100):
+        if not self.dbConnection.is_connected():
+            self.connect()
 
+ 
+        query="select base_fingerprint, base_hash, iterate_list, base_settings, sims_table_name FROM swgoh_sims WHERE base_hash='" +str(hash) +"'"
+        self.cursor.execute(query)
+        row=self.cursor.fetchone()
+        self.cursor.fetchall
+
+        baseFingerpring=row[0]
+        baseHash=row[1]
+        iterateList=json.loads(row[2])
+        baseSettings=json.loads(row[3])
+        simsTableName=row[4]
+
+        results5={}
+   
+
+        for valueFunc in ["high", "mid", "low", "Elisa", "ElisaM14"]:
+            select_top_scores_query="SELECT settings_fingerprint, settings_hash, settings_iterated_diff, all_results, score_"+valueFunc+", roll_avg_energy_cost FROM sim_results_for_"+str(hash)
+            select_top_scores_query+=" ORDER BY score_"+valueFunc+" DESC LIMIT "+str(maxTopResults)
         
+            self.cursor.execute(select_top_scores_query)
+            rows=self.cursor.fetchall()
+            
+            results=[]
+            
+            for row in rows:
+                jobNum=row[0] +"x" +str(row[1])
+
+                jobSettings=deepcopy(baseSettings)
+                simSettings.SimSettings.mergeSettings(jobSettings, json.loads(row[2]))
+
+                jobScores=json.loads(row[3])
+                jobScores["budgetBreakdown"]["avgRollModEnergyCost"]= row[5]
+
+                results.append({"job":jobNum, "settings":jobSettings, "scores": jobScores})
+              
+
+            results5[valueFunc]=results
+
+        return results5 

@@ -1,58 +1,49 @@
-from copy import deepcopy
 from modAnalysis import ModAnalysis
 from mod import Mod
 
-
-
 class HeatMap:
 
-    def __init__(self) -> None:
+    def __init__(self, heat={"mode":"singleSim", "iterateList":False}) -> None:
+
         self.testlevel=0
-        self.version="multiSim"
+        self.mode=heat["mode"]
         self.activeMarkers=[]
         self.HEATmap={}
+        self.iterateList=heat["iterateList"]
+        self.simSettings=False
+
+        self.precalculateThings=True
+
+        if (self.precalculateThings):
+            self.precalcGetApplicableIterates()
+
+    def supplySettings(self, simSettings):
+        self.simSettings=simSettings
 
     def reset(self):
         self.activeMarkers=[]
         self.HEATmap={}
 
-    def addMarker(self, levelProbability, mod:Mod, simSettings={}):
-        if self.version == "multiSim" and not simSettings:
-            assert(False)
+    def addMarker(self, levelProbability, mod:Mod):
+        if self.isHeatApplicable(levelProbability, mod):
+            marker=self.makeHeatMarker(levelProbability, mod)
+            assert(self.isMarkerAllreadyActive(marker) == False)
+            self.activeMarkers.append(marker)
 
-        if True: #self.version == "singleSim":
-            if self.isHeatApplicable(levelProbability, mod):
-                marker=self.makeHeatMarker(levelProbability, mod, simSettings)
-                assert(self.isMarkerAllreadyActive(marker) == False)
-                self.activeMarkers.append(marker)
-
-#                print("DROPPING MARKER")
-#                print(marker)
-            else:
-                pass
-        else:
-            assert(False)
-
-
-    def stripMarker(self, levelProbability, mod:Mod, simSettings={}):
-        if self.version == "multiSim" and not simSettings:
-            assert(False)
-       
-        assert(self.isHeatApplicable(levelProbability, mod))
-        sameMarker=self.makeHeatMarker(levelProbability, mod, simSettings)
+    def stripMarker(self, levelProbability, mod:Mod):
+        #assert(self.isHeatApplicable(levelProbability, mod))
+        #sameMarker=self.makeHeatMarker(levelProbability, mod)
         assert(self.activeMarkers)
         oldMarker=self.activeMarkers.pop()
-        assert(HeatMap.areMarkersForSameMod(oldMarker, sameMarker))
+        #assert(HeatMap.areMarkersForSameMod(oldMarker, sameMarker))
+        if self.activeMarkers:
+            self.addHeatVortexToLastActiveMarker(levelProbability, oldMarker["vortex"])
+
     
-    def getSubAnalysisFor(self, levelProbability, mod:Mod, simSettings={}) -> dict:  ## RETURNS NORMALIZED DISTRIBUTION
-        if self.version == "multiSim" and not simSettings:
-            assert(False)
-
+    def getSubAnalysisFor(self, levelProbability, mod:Mod) -> dict:  ## RETURNS NORMALIZED DISTRIBUTION
         subAnalysis= False
-        
-
         if self.isHeatApplicable(levelProbability, mod):
-            marker=self.makeHeatMarker(levelProbability, mod, simSettings)
+            marker=self.makeHeatMarker(levelProbability, mod)
             subAnalysis= self.getHeatVortex(marker)
             
             if subAnalysis and self.testlevel > 95:
@@ -62,8 +53,11 @@ class HeatMap:
                 print(" subanalysis sum", tmpSum ," for ", marker)
         return subAnalysis
                    
-    def analyzeMod(self, modlevelProbability, mod:Mod, simSettings={}):
-        for marker in self.activeMarkers:
+    def analyzeMod(self, modlevelProbability, mod:Mod):
+        if self.activeMarkers:
+            marker=self.activeMarkers[-1]
+
+        #for marker in self.activeMarkers:
 
             modSpeed=mod.secondary["speed"][1]
             markerVortex= self.getOrMakeHeatVortex(marker)
@@ -72,7 +66,10 @@ class HeatMap:
             markerVortex["dist"][modSpeed]+= modlevelProbability / markerProbability  
     
     def analyzeBudgetChange(self, levelProbability, change):
-        for marker in self.activeMarkers:
+        if self.activeMarkers:
+            marker=self.activeMarkers[-1]
+
+        #for marker in self.activeMarkers:
 
             markerVortex=self.getOrMakeHeatVortex(marker)
             markerProbability= marker["levelProbability"]
@@ -82,9 +79,11 @@ class HeatMap:
                 else:
                     markerVortex["costs"][what] = change[what] * levelProbability / markerProbability
 
+    def addHeatVortexToLastActiveMarker(self, modLevelProbability, modVortex):
+        if self.activeMarkers:
+            marker=self.activeMarkers[-1]
 
-    def addHeatVortexToActiveMarkers(self, modLevelProbability, modVortex, simSettings={}):
-        for marker in self.activeMarkers:
+        #for marker in self.activeMarkers:
 
             markerVortex=self.getOrMakeHeatVortex(marker)
             markerProbability= marker["levelProbability"]
@@ -98,7 +97,6 @@ class HeatMap:
                 else:
                     markerVortex["costs"][what] = modVortex["costs"][what] * modLevelProbability / markerProbability
         
-   
     def getHeatVortex(self, marker):
         if marker["vortex"]:
             return marker["vortex"]
@@ -160,8 +158,8 @@ class HeatMap:
 
     @staticmethod
     def isHeatApplicable(levelProbability, mod:Mod) -> bool:
-        speedBumps=mod.secondary["speed"][0]
-        speed=mod.secondary["speed"][1]
+        #speedBumps=mod.secondary["speed"][0]
+        #speed=mod.secondary["speed"][1]
         isApplicable=True
         #isApplicable=isApplicable and mod.level >= 12
         #isApplicable=isApplicable and mod.grade in [ "d", "c","b","a", "6e", "6d", "6c"]
@@ -169,9 +167,7 @@ class HeatMap:
         #isApplicable=isApplicable and speed in range(speedBumps*3 , speedBumps*6 -1)
         return isApplicable
  
-    def makeHeatMarker(self, levelProbability, mod:Mod, simSettings={}) -> dict:
-        if self.version == "multiSim" and not simSettings:
-                assert(False)
+    def makeHeatMarker(self, levelProbability, mod:Mod) -> dict:
 
         marker={}
         marker["levelProbability"]=levelProbability
@@ -185,14 +181,17 @@ class HeatMap:
         marker["mapKeys"]["speedBumps"]=mod.secondary["speed"][0]
         marker["mapKeys"]["speed"]=mod.secondary["speed"][1]
         
-        if self.version == "singleSim":
-            return marker
-        elif self.version == "multiSim":
-            multiSimMarkers= HeatMap.selectApplicableIterates(mod, simSettings)
+        #print(self.mode)
 
+        if self.mode == "singleSim":
+            return marker
+        elif self.mode == "multiSim":
+            multiSimMarkers= self.getApplicableIterates(mod)
+            #print(multiSimMarkers)
+            assert(self.simSettings)
             for iteration in multiSimMarkers:
                 key=iteration["grade"]+iteration["speedBumps"]
-                value=simSettings["minSpeedToSlice"][iteration["speedBumps"]][iteration["grade"]]["square"]
+                value=self.simSettings["minSpeedToSlice"][iteration["speedBumps"]][iteration["grade"]]["square"]
                 marker["mapKeys"][key] = value
 
             return marker
@@ -215,36 +214,36 @@ class HeatMap:
         return tmpBool
 
     
-
     #uncover stat limit and min initial speed not covered!
     #heat has to be applied DOWNSTREAM of those!
-    @staticmethod
-    def selectApplicableIterates(mod:Mod, simSettings:dict)-> list:
+    
+    def getApplicableIterates(self, mod:Mod)-> list:
+        assert(self.simSettings)
         
-        if not simSettings:
-            assert(False)
+        if self.precalculateThings:
+            applicables=self.applicableIteratesMap[mod.grade][mod.secondary["speed"][0]][mod.level]
+        else:
+            applicables=[]
+            for iteration in self.iterateList:
+            # print(iteration)
+                if iteration["target"] == "minSpeedToSlice":
+                    tmpBool=True
+                    tmpBool=tmpBool and (Mod.allGrades.index(mod.grade) < Mod.allGrades.index(iteration["grade"]) or (mod.level < 15 and mod.grade == iteration["grade"]))
+                    tmpBool=tmpBool and (mod.secondary["speed"][0] <= int(iteration["speedBumps"]))
+
+                    if tmpBool:
+                        applicables.append({"grade": iteration["grade"], "speedBumps":HeatMap.speedBumpsStr(iteration["speedBumps"]) })
+
+                else:
+                    pass #ignore other iterables
         
-        iterateList=simSettings["general"]["iterateList"]
-        applicables=[]
-
-        for iteration in iterateList:
-           # print(iteration)
-            if iteration["target"] == "minSpeedToSlice":
-                tmpBool=True
-                tmpBool=tmpBool and (Mod.allGrades.index(mod.grade) < Mod.allGrades.index(iteration["grade"]) or (mod.level < 15 and mod.grade == iteration["grade"]))
-                tmpBool=tmpBool and (mod.secondary["speed"][0] <= int(iteration["speedBumps"]))
-
-                if tmpBool:
-                    applicables.append({"grade": iteration["grade"], "speedBumps":HeatMap.speedBumpsStr(iteration["speedBumps"]) })
-
-            else:
-                pass #ignore other iterables
+        #print(mod.grade, mod.level, mod.secondary["speed"])
         
-#        print(applicables)
         return applicables
 
     @staticmethod
     def speedBumpsStr(speedBumps):
+
         if type(speedBumps) is int:
             if speedBumps==0:
                 speedBumps="0"
@@ -259,3 +258,39 @@ class HeatMap:
             elif speedBumps==5:
                 speedBumps="5"
         return speedBumps
+
+
+    def precalcGetApplicableIterates(self):
+        self.applicableIteratesMap={}
+
+        for grade in Mod.allGrades:
+            self.applicableIteratesMap[grade]={}
+
+            for speedBumps in range(0,6):
+                self.applicableIteratesMap[grade][speedBumps]={}
+                
+                for level in [1,3,6,9,12,15]:
+                    self.applicableIteratesMap[grade][speedBumps][level]=[]
+
+                    #optimize for below checks
+                    if level>1 and level<15:
+                        self.applicableIteratesMap[grade][speedBumps][level] = self.applicableIteratesMap[grade][speedBumps][1] 
+                    else:
+                        for iteration in self.iterateList:
+                            # print(iteration)
+                            if iteration["target"] == "minSpeedToSlice":
+                                tmpBool=True
+                                tmpBool=tmpBool and (Mod.allGrades.index(grade) < Mod.allGrades.index(iteration["grade"]) or (level < 15 and grade == iteration["grade"]))
+                                tmpBool=tmpBool and (speedBumps <= int(iteration["speedBumps"]))
+
+                                if tmpBool:
+                                    self.applicableIteratesMap[grade][speedBumps][level].append({"grade": iteration["grade"], "speedBumps":HeatMap.speedBumpsStr(iteration["speedBumps"]) })
+
+                            else:
+                                pass #ignore other iterables
+
+            
+
+
+
+

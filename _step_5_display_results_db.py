@@ -1,5 +1,6 @@
 
-import processJobs
+import processJobs_heat
+import dbOperations
 from datetime import datetime
 
 
@@ -11,48 +12,27 @@ if __name__ == '__main__':
     
     start_time = datetime.now()
     
-    test=processJobs.JobsProcessing()
-        
+    processJobs=processJobs_heat.JobsProcessing()
+    test=dbOperations.DbOperations()
+    test.connect()
+
+    #hash=81002551
+    #hash=2545693919
+    hash=3766640408
+       
     print("reading")
     start_time = datetime.now()
-    test.loadTopResultsFromDb(maxTopResults=100)
+    result5=test.loadTopResultsFromDb(hash, maxTopResults=100)
     end_time = datetime.now()
     
     print('Duration: {}'.format(end_time - start_time))
     
-    #test2=test.filterByX(filter="uncoverStatsLimit", value=2)
-    #test=test.filterByX(filter="microprocessor", value=3)
+    for valueFunc in ["high", "mid", "low", "Elisa", "ElisaM14"]:
+
+        processJobs.displayResultsRelevantSettings(result5[valueFunc], 10)
         
-    print("sorting")
-    start_time = datetime.now()
-    test.sortJobsBy("high")
-    end_time = datetime.now()
-    print('Duration: {}'.format(end_time - start_time))
-    
-    input("press enter to display, ")
+        input()
 
-    test.displayResultsRelevantSettings(50)
+        for x in range(0,20):
+            print()
 
-    test.sortJobsBy("mid")
-    input("press enter to display, sort by mid")
-    for x in range(0,20):
-        print()
-    test.displayResultsRelevantSettings(50)
-
-    test.sortJobsBy("low")
-    input("press enter to display, sort by low")
-    for x in range(0,20):
-        print()
-    test.displayResultsRelevantSettings(50)
-
-    test.sortJobsBy("Elisa")
-    input("press enter to display, sort by Elisa")
-    for x in range(0,20):
-        print()
-    test.displayResultsRelevantSettings(50)
-
-    test.sortJobsBy("ElisaM14")
-    input("press enter to display, sort by ElisaM14")
-    for x in range(0,20):
-        print()
-    test.displayResultsRelevantSettings(50)

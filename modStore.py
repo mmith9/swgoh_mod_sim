@@ -101,9 +101,9 @@ class ModStore:
 
         mod=Mod()
         mod.pips=5
-        mod.shape="triangle"
+        mod.shape="square"
         mod.grade="a"
-        mod.primary="crit dmg"
+        mod.primary="offense %"
         mod.level=1
         mod.secondary["speed"]=[1,5]
         probability=1 ## TESTING PURPOSES

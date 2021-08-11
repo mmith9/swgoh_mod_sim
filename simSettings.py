@@ -14,6 +14,8 @@ class SimSettings:
         self.fileCount=0
         self.snapshot="none"
 
+        self.noHash={"iterateList":{} }
+
         self.general={
             "sellAccuracyArrows":1, "keepSpeedArrows":1, "ignoreRestOfArrows":1
             ,"sellNoSpeedMods":1, "sellTooLowInitialSpeedMods":1, "sellTooSlowFinalMods":1
@@ -24,7 +26,6 @@ class SimSettings:
             ,"modSet":"offense"
             ,"quickPrimaryForking":1, "quickSecondaryForking":1, "quickSpeedForking":1
             ,"quickSDCForking":1, "quickSDCandCForking":1, "quickSDCCTForking":1
-            ,"iterateList":{}
             }
 
         self.modStore={
@@ -71,7 +72,19 @@ class SimSettings:
         # NECCESARY FOR MULTIPROCESSING
         # modsimulation takes argument in this form, objects are bad, dictionaries are ok
         settings={
+            
+            "noHash" : self.noHash
+            ,"general" : self.general
+            ,"minInitialSpeed": self.minInitialSpeed
+            ,"uncoverStatsLimit": self.uncoverStatsLimit
+            ,"minSpeedToSlice": self.minSpeedToSlice
+            ,"minSpeedToKeep": self.minSpeedToKeep
+            ,"modStore": self.modStore
+        }
+        return settings
 
+    def getAllButNoHash(self):
+        settings={
             "general" : self.general
             ,"minInitialSpeed": self.minInitialSpeed
             ,"uncoverStatsLimit": self.uncoverStatsLimit
@@ -80,6 +93,8 @@ class SimSettings:
             ,"modStore": self.modStore
         }
         return settings
+
+
 
     def set(self, target, value, grade="any", shape="any", speedBumps="any"):      
         # example:  settings.set("minSpeedToSlice", grade=any, shape=any,)
@@ -214,6 +229,7 @@ class SimSettings:
 
         with open(cutFileName, "w") as fp:
             json.dump(jobs, fp)
+
         iteratedList.clear()
 
     def iterateCheckSanity(self):
@@ -319,7 +335,7 @@ class SimSettings:
         return fingerprint
 
     def settingsHash(self) -> int:
-        return SimSettings.settingsHashOf(self.getAll())
+        return SimSettings.settingsHashOf(self.getAllButNoHash())
     
     @staticmethod
     def settingsHashOf(settings) -> int:
@@ -366,23 +382,29 @@ class SimSettings:
             self.iterationCount+= 1
             self.iteratedBranches+= 1
 
+            # Because allready checked by partial sanity, last step is not partial but full   
+            #assert(self.iterateCheckSanity() == True)
+            
+            #if (sanityConstraint==1) and not self.iterateCheckSanity() :
+            #    pass
+
+            #sanity provided by quick partial sanity
+            
+            self.generatedSettings+=1
             if (self.testlevel>0) and (self.iterationCount % 10000 == 0):
                 #print(".", end="")
                 pass
 
-            if (self.testlevel>0) and (self.iterationCount % 100 == 0):
-                print("branches:", self.iteratedBranches, "of", self.iterationBranchesTotal, 
-                "(", self.iteratedBranches/self.iterationBranchesTotal*100,"% )", "valid settings produced", self.generatedSettings )
-              
-            # Because allready checked by partial sanity, last step is not partial but full   
-            assert(self.iterateCheckSanity() == True)
-            
-            if (sanityConstraint==1) and not self.iterateCheckSanity() :
-                pass
+            if (self.testlevel>0) and (self.iterationCount % 1000 == 0):
+                print("branches:", '{:,}'.format(self.iteratedBranches), "of", '{:,}'.format(self.iterationBranchesTotal), 
+                "(", '{:,}'.format(self.iteratedBranches/self.iterationBranchesTotal*100) ,"% )", "valid settings produced", '{:,}'.format(self.generatedSettings) )
+                
+            if self.testlevel>20:
+                input()
 
-            elif countBranchOnly>0 :
-                self.generatedSettings+=1
-
+ 
+            if countBranchOnly>0 :
+ 
                 if self.testlevel>20:
                     print(self.settingsFingerprint()," ", end="")
                     print(self.settingsHash())
@@ -393,7 +415,7 @@ class SimSettings:
                     pass
 
             else:
-                self.generatedSettings+=1
+            
                 if (self.testlevel>0) and (self.generatedSettings % 1000 == 0):
                     #print("*", end="")
                     pass
@@ -521,7 +543,7 @@ class SimSettings:
         return isOnList
 
     def makeSnapshot(self):
-        self.snapshot=deepcopy(self.getAll())        
+        self.snapshot=deepcopy(self.getAllButNoHash())      
  
     def getIteratedSettingsOnly(self, iterateList) -> dict :
         settings={}
