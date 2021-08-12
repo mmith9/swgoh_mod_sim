@@ -1,4 +1,5 @@
 from json.encoder import py_encode_basestring_ascii
+from typing import AnyStr
 from mod import Mod
 from copy import deepcopy
 import json
@@ -215,7 +216,7 @@ class SimSettings:
         assert(self.snapshot != "none")
 
         if fileCut>0:
-            cutFileName="iteration_results/"+outputPrefix +"x" +str(self.fileCount)+".json"
+            cutFileName="iteration_results/"+outputPrefix +"x" + SimSettings.padNameWithZeros(str(self.fileCount),6)+".json"
             self.fileCount+=1
         else:
            cutFileName="iteration_results/"+outputPrefix+".json"
@@ -631,3 +632,10 @@ class SimSettings:
 
             else:
                 assert(False)
+
+    @staticmethod
+    def padNameWithZeros(number, outputLength):
+        aStr=str(number)
+        for x in range(0,outputLength-len(aStr)):
+            aStr="0"+aStr
+        return aStr

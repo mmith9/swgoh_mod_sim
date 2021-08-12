@@ -1,3 +1,4 @@
+assert(False)
 import json
 import multiprocessing
 import math

@@ -91,13 +91,13 @@ start_time = datetime.now()
 
 iterateList.reverse()  # optimization for faster branch pruning
 
-simSettings.generatedSettings= 48980000 #last generated
-simSettings.fileCount=1363 #last file plus 1
-continueList=[17,17,16,16,16,16,16,16,13,13,13,13,15,15,11,5,14,14,11,5,11,9,5,8,5] # settings from last file, order by reversed iterate list
+simSettings.generatedSettings= 58200000 #last generated
+simSettings.fileCount=1 #last file plus 1
+continueList=[17,17,17,16,15,15,15,14,13,13,11,11,15,13,10,6,14,11,10,6,10,8,6,8,6] # settings from last file, order by reversed iterate list
 
 #continue=1
 
-output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER11", fileCut=20000, sanityConstraint=1, lightweight=1, continueList=continueList)
+output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITEs11", fileCut=1000, sanityConstraint=1, lightweight=1, continueList=continueList)
 #output=simSettings.iterateSettingsByListQuick(iterateList, benchmarkPercent=1 , outputPrefix="ITER09", fileCut=10000, sanityConstraint=1, lightweight=1)
 #output=simSettings.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1, lightweight=1, continueList=[])
 
@@ -108,7 +108,7 @@ output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER11"
 
 # continue things
 if 1==0:
-    lastFileName="iteration_results/ITER11x1362.json"
+    lastFileName="iteration_results/ITER11x1823.json"
     with open(lastFileName, "r") as fp:
         lastBatch=json.load(fp)
 

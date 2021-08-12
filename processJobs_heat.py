@@ -36,8 +36,8 @@ class JobsProcessing:
     def processFiles(self, inputPrefix="ITER", outputPrefix="EVAL", filesTotal=0, fileCut=1000, multiproc=False):
         fileList=[]
         for filenum in range(0, filesTotal):
-            jobsFilename="iteration_results/"+inputPrefix + "x" +str(filenum)+".json"
-            outputFilename="iteration_results/"+outputPrefix + "x" + str(filenum)+".json"
+            jobsFilename="iteration_results/"+inputPrefix + "x" + SimSettings.padNameWithZeros(str(filenum),6)+".json"
+            outputFilename="iteration_results/"+outputPrefix + "x" + SimSettings.padNameWithZeros(str(filenum),6)+".json"
             #print("input:", jobsFilename, outputFilename)
             if os.path.isfile(jobsFilename):
                 if os.path.isfile(outputFilename):
@@ -543,6 +543,12 @@ class JobsProcessing:
         
         return {"header": header, "resultListForDb": preparedResults}
 
+    @staticmethod
+    def padNameWithZeros(number, outputLength):
+        aStr=str(number)
+        for x in range(0,outputLength-len(aStr)):
+            aStr="0"+aStr
+        return aStr
 
 def wrapperFunc(job):
     baseSettings=job[0]
