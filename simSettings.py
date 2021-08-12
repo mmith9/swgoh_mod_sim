@@ -3,6 +3,7 @@ from mod import Mod
 from copy import deepcopy
 import json
 import binascii
+from heatMap import HeatMap
 
 class SimSettings:
 
@@ -340,9 +341,9 @@ class SimSettings:
     @staticmethod
     def settingsHashOf(settings) -> int:
         return binascii.crc32(bytes(json.dumps(settings), "utf-8"))
-    
+  
     def iterateSettingsByListQuick(self, iterateList, listPosition=0, iteratedList=[], complexityList=[], countBranchOnly=0, benchmarkPercent=0,
-     outputPrefix="none", fileCut=0, sanityConstraint=1, lightweight=1):
+     outputPrefix="none", fileCut=0, sanityConstraint=1, lightweight=1, continueList=[]):
  
         if not complexityList:
             assert(self.general["quickSDCCTForking"] == 1)
@@ -350,7 +351,7 @@ class SimSettings:
             self.calculateComplexity(iterateList, complexityList)
             self.iterationBranchesTotal=complexityList[0]
             self.iteratedBranches=0
-            self.generatedSettings=0
+            #self.generatedSettings=0
             self.makeSnapshot()
             
 
@@ -369,13 +370,23 @@ class SimSettings:
             currentIteration=iterateList[listPosition]
            
             for x in currentIteration["range"]:
-                self.set(currentIteration["target"], x, grade=currentIteration["grade"], shape="square" , speedBumps=currentIteration["speedBumps"])  ## Ignore other shapes
-                if self.iterateCheckSanityPartialQuick(iterateList, listPosition):
-                    self.iterateSettingsByListQuick(iterateList, listPosition+1, iteratedList, complexityList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut, sanityConstraint, lightweight)
+                if continueList: #not empty
+                    if x!= continueList[0]:
+                        # do nothing, wait for another x
+                        pass
+                    else:
+                        continueList.pop(0)
+                        self.set(currentIteration["target"], x, grade=currentIteration["grade"], shape="square" , speedBumps=currentIteration["speedBumps"])  ## Ignore other shapes
+                        self.iterateSettingsByListQuick(iterateList, listPosition+1, iteratedList, complexityList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut, sanityConstraint, lightweight, continueList)                       
                 else:
-                    if self.testlevel>9:
-                        print("partial sanity branch cut, list pos:", listPosition, "branches cut:", complexityList[listPosition+1])
-                    self.iteratedBranches+= complexityList[listPosition+1]
+
+                    self.set(currentIteration["target"], x, grade=currentIteration["grade"], shape="square" , speedBumps=currentIteration["speedBumps"])  ## Ignore other shapes
+                    if self.iterateCheckSanityPartialQuick(iterateList, listPosition):
+                        self.iterateSettingsByListQuick(iterateList, listPosition+1, iteratedList, complexityList, countBranchOnly, benchmarkPercent, outputPrefix, fileCut, sanityConstraint, lightweight)
+                    else:
+                        if self.testlevel>9:
+                            print("partial sanity branch cut, list pos:", listPosition, "branches cut:", complexityList[listPosition+1])
+                        self.iteratedBranches+= complexityList[listPosition+1]
 
         #nope all on list has been iterated 
         else:
@@ -397,7 +408,18 @@ class SimSettings:
 
             if (self.testlevel>0) and (self.iterationCount % 1000 == 0):
                 print("branches:", '{:,}'.format(self.iteratedBranches), "of", '{:,}'.format(self.iterationBranchesTotal), 
-                "(", '{:,}'.format(self.iteratedBranches/self.iterationBranchesTotal*100) ,"% )", "valid settings produced", '{:,}'.format(self.generatedSettings) )
+                "(", '{:,}'.format(self.iteratedBranches/self.iterationBranchesTotal*100) ,"% )", "valid settings produced", '{:,}'.format(self.generatedSettings) , end="\t")
+
+                applicables=[]
+                for iteration in iterateList:
+                    if iteration["target"] == "minSpeedToSlice":
+                        applicables.append({"grade": iteration["grade"], "speedBumps":HeatMap.speedBumpsStr(iteration["speedBumps"]) })
+
+                for item in applicables:
+                    print(self.minSpeedToSlice[int(item["speedBumps"])][item["grade"]]["square"], " ", end="" )
+                print()
+
+
                 
             if self.testlevel>20:
                 input()
@@ -441,6 +463,8 @@ class SimSettings:
                 return outputPrefix
             else:
                 return iteratedList
+
+
 
     def iterateStep2(self, iteratedList, iterateList, lightweight):
         if lightweight==0:

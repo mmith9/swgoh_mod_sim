@@ -2,6 +2,7 @@
 from mod import Mod
 from budget import Budget
 
+
 class ModAnalysis:
         
     def __init__(self):

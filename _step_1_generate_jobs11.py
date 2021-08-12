@@ -1,3 +1,4 @@
+from os import sep
 from simSettings import *
 from datetime import datetime
 
@@ -90,11 +91,34 @@ start_time = datetime.now()
 
 iterateList.reverse()  # optimization for faster branch pruning
 
-output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER11", fileCut=50000, sanityConstraint=1, lightweight=1)
+simSettings.generatedSettings= 48980000 #last generated
+simSettings.fileCount=1363 #last file plus 1
+continueList=[17,17,16,16,16,16,16,16,13,13,13,13,15,15,11,5,14,14,11,5,11,9,5,8,5] # settings from last file, order by reversed iterate list
+
+#continue=1
+
+output=simSettings.iterateSettingsByListQuick(iterateList, outputPrefix="ITER11", fileCut=20000, sanityConstraint=1, lightweight=1, continueList=continueList)
 #output=simSettings.iterateSettingsByListQuick(iterateList, benchmarkPercent=1 , outputPrefix="ITER09", fileCut=10000, sanityConstraint=1, lightweight=1)
-#output=simSettings.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1)
+#output=simSettings.iterateSettingsByListQuick(iterateList, countBranchOnly=1, sanityConstraint=1, lightweight=1, continueList=[])
 
-end_time = datetime.now()
+#end_time = datetime.now()
 
-print(output)
+#print(output)
+
+
+# continue things
+if 1==0:
+    lastFileName="iteration_results/ITER11x1362.json"
+    with open(lastFileName, "r") as fp:
+        lastBatch=json.load(fp)
+
+    lastJob=lastBatch["jobList"][-1][1]
+
+    print(lastJob)
+    for iter in iterateList:
+        if iter["target"]== "minSpeedToSlice":
+            print( lastJob[iter["target"]][str(iter["speedBumps"])][iter["grade"]]["square"] , end=",")
+    print()
+    print("job num",lastBatch["jobList"][-1][0])
+
 

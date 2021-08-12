@@ -4,6 +4,10 @@ import processJobs
 import simSettings
 import json
 
+assert(False)
+
+
+
 inputPrefix="HEAT08"
 maxFiles=300
 fileNum=0

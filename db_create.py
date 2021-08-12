@@ -1,6 +1,9 @@
 import os
 import mysql.connector
 
+
+assert(False)
+
 mysqlDatabaseName="swgoh_sim_results"
 mysqlUser=os.environ.get("mysql_user")
 mysqlPassword=os.environ.get("mysql_password")

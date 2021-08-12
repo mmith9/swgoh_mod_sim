@@ -6,6 +6,7 @@ from simSettings import *
 from modStore import ModStore
 from copy import deepcopy
 
+
 ## simulate weekly budget
 class BudgetedEvaluation:
    
