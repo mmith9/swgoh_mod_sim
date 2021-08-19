@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     inFile="ITER11"
     outFile="HEAT11"
-    fileCount=3000
+    fileCount=30000
     
 
     start_time = datetime.now()

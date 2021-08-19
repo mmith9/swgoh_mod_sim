@@ -52,7 +52,7 @@ class JobsProcessing:
 
         else:
             print(fileList)
-            pool=multiprocessing.Pool(multiprocessing.cpu_count())
+            pool=multiprocessing.Pool(multiprocessing.cpu_count()-2)
             with pool:
                 results=pool.map(self.processFileWrapper, fileList)
             pool.close()
@@ -495,7 +495,7 @@ class JobsProcessing:
                     json.dump(uniqueJobsList, fp)
 
     @staticmethod
-    def prepareResultListForDb(batchResults, trim=0) -> dict:
+    def prepareResultListForDb_old(batchResults, trim=0) -> dict:
         header=batchResults["header"]
         results=batchResults["results"]
         preparedResults=[]
@@ -542,6 +542,85 @@ class JobsProcessing:
             preparedResults.append(preparedResult)                                    
         
         return {"header": header, "resultListForDb": preparedResults}
+
+
+    @staticmethod
+    def prepareResultListForDb(batchResults, trim=0) -> dict:
+        header=batchResults["header"]
+        results=batchResults["results"]
+        preparedResults=[]
+
+        ## [fingerprint, hash, high, mid, low, elisa, elisam14, energy, credits, microproc, avg energy, avg credit, cap_amp, ]
+
+        for result in results:
+            scores=result["scores"]
+            settings=result["settings"]
+
+            preparedResult=[]
+            preparedResult.append(SimSettings.settingsHashOf(result["settingsFingerprint"]))
+            preparedResult.append(result["settingsHash"])
+            
+            preparedResult.append(scores["speedValue"]["high"])
+            preparedResult.append(scores["speedValue"]["mid"])
+            preparedResult.append(scores["speedValue"]["low"])
+            preparedResult.append(scores["speedValue"]["Elisa"])
+            preparedResult.append(scores["speedValue"]["ElisaM14"])
+
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["modEnergy"])
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["credits"])
+            preparedResult.append(scores["budgetBreakdown"]["budgetRemaining"]["microprocessor"])
+
+            preparedResult.append(scores["budgetBreakdown"]["budgetRoll"]["modEnergy"])
+            preparedResult.append(scores["budgetBreakdown"]["budgetRoll"]["credits"])
+            preparedResult.append(scores["budgetBreakdown"]["capAmpBought"])
+
+            preparedResult.append(settings["uncoverStatsLimit"]["e"]["square"])
+            if "d" in settings["uncoverStatsLimit"].keys():
+                preparedResult.append(settings["uncoverStatsLimit"]["d"]["square"])
+            else:
+                preparedResult.append(-1)
+
+            preparedResult.append(settings["minInitialSpeed"]["e"]["square"])
+            if "d" in settings["minInitialSpeed"].keys():
+                preparedResult.append(settings["minInitialSpeed"]["d"]["square"])
+            else:
+                preparedResult.append(-1)
+                      
+            preparedResult.append(settings["minSpeedToSlice"]["1"]["d"]["square"])
+            preparedResult.append(settings["minSpeedToSlice"]["2"]["d"]["square"])
+
+            preparedResult.append(settings["minSpeedToSlice"]["1"]["c"]["square"])
+            preparedResult.append(settings["minSpeedToSlice"]["2"]["c"]["square"])
+            preparedResult.append(settings["minSpeedToSlice"]["3"]["c"]["square"])
+            
+            for grade in ["b", "a", "6e", "6d", "6c", "6b"]            :
+                for speedBumps in ["1", "2", "3", "4"]:
+                    if grade in settings["minSpeedToSlice"][speedBumps].keys():
+                        preparedResult.append(settings["minSpeedToSlice"][speedBumps][grade]["square"])
+                    else:
+                        preparedResult.append(-1)
+           
+            # if trim > 0:
+            #     for shape in ["squaresValue", "trianglesValue", "diamondsValue", "circlesValue", "crossesValue"]:
+            #         del(scores[shape])
+                
+            #     del(scores["rltilt"])
+            #     del(scores["targetability"])
+            #     del(scores["budgetBreakdown"]["budgetRoll"])
+            #     del(scores["budgetBreakdown"]["budgetBuy"])
+            #     del(scores["budgetBreakdown"]["Rbought"])
+            #     del(scores["budgetBreakdown"]["Bbought"])
+            #     del(scores["budgetBreakdown"]["BSbought"])
+            #     del(scores["speedDistribution"])
+            
+            # preparedResult.append(json.dumps(result["settings"]))
+            # preparedResult.append(json.dumps(scores))
+
+            preparedResults.append(preparedResult)                                    
+        
+        return {"header": header, "resultListForDb": preparedResults}
+
+
 
     @staticmethod
     def padNameWithZeros(number, outputLength):
